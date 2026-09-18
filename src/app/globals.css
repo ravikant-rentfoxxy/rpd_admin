@@ -366,6 +366,13 @@ a.list-item:hover { background: var(--surface-2); }
 .thumb { width: 46px; height: 46px; border-radius: 9px; object-fit: cover; background: #efedf3; flex: none; border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); }
 .thumb svg { width: 18px; height: 18px; }
 
+/* ---------- AI post for X ---------- */
+.x-post {
+  white-space: pre-wrap; line-height: 1.6; font-size: 15px;
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+
 /* ---------- Person dropdown ---------- */
 .combo { position: relative; }
 .combo-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 7px 10px 7px 10px; text-align: left; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); transition: border-color 0.15s, box-shadow 0.15s; }

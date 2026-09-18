@@ -137,6 +137,7 @@ export type Grievance = {
   canSeeAuthor: boolean;
   canAssign: boolean;
   canResolve: boolean;
+  canSummarise: boolean;
   status: 'OPEN' | 'RESOLVED';
   resolvedAt: string | null;
   resolvedByName: string | null;
@@ -145,6 +146,8 @@ export type Grievance = {
   assigneePostLabel: string | null;
   assignedAt: string | null;
   assignedByName?: string | null;
+  assignedByPostLabel?: string | null;
+  isAssignedToMe?: boolean;
   regionLabel: string | null;
   issueName: string;
   issueBand: string;

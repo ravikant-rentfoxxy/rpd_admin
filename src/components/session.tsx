@@ -12,7 +12,7 @@ export function useSession() {
   return session;
 }
 
-export type NavCounts = { awaitingReview: number; openGrievances: number };
+export type NavCounts = { awaitingReview: number; openGrievances: number; assignedToMe: number };
 
 export const CountsContext = createContext<{ counts: NavCounts | null; refreshCounts: () => void }>({
   counts: null,

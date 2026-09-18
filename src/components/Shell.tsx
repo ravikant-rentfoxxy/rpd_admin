@@ -10,7 +10,7 @@ import { AREA_LEVEL, postTitle } from '@/lib/format';
 import type { SessionMe } from '@/lib/types';
 import { Icon } from './icons';
 import { CountsContext, SessionContext, type NavCounts } from './session';
-import { Avatar, Button, ToastProvider } from './ui';
+import { Avatar, Button, ConfirmModal, ToastProvider } from './ui';
 
 type NavItem = {
   href: string;
@@ -38,6 +38,7 @@ const NAV: { title: string; items: NavItem[] }[] = [
     title: 'Public',
     items: [
       { href: '/grievances', label: 'Grievances', icon: <Icon.Megaphone />, count: 'openGrievances' },
+      { href: '/my-grievances', label: 'Assigned to me', icon: <Icon.Clipboard />, count: 'assignedToMe' },
       { href: '/engagement', label: 'Polls & quizzes', icon: <Icon.Sparkle />, superAdmin: true },
     ],
   },
@@ -60,6 +61,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [counts, setCounts] = useState<NavCounts | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => {
     if (!isSignedIn()) {
@@ -170,7 +172,14 @@ export function Shell({ children }: { children: ReactNode }) {
                     <span>{postTitle(me.post)}</span>
                   </div>
                 </div>
-                <button className="sidebar-signout" onClick={signOut}>
+                <button
+                  className="sidebar-signout"
+                  onClick={() => {
+                    // On phones the menu sits above dialogs, so close it first.
+                    setMenuOpen(false);
+                    setConfirmSignOut(true);
+                  }}
+                >
                   <Icon.Logout />
                   Sign out
                 </button>
@@ -193,6 +202,22 @@ export function Shell({ children }: { children: ReactNode }) {
               <main className="page">{children}</main>
             </div>
           </div>
+          <ConfirmModal
+            open={confirmSignOut}
+            title="Sign out?"
+            message={
+              <>
+                You will need your mobile number and a new OTP to sign in to the admin portal again.
+              </>
+            }
+            confirmLabel="Sign out"
+            danger
+            onClose={() => setConfirmSignOut(false)}
+            onConfirm={() => {
+              setConfirmSignOut(false);
+              signOut();
+            }}
+          />
         </ToastProvider>
       </CountsContext.Provider>
     </SessionContext.Provider>

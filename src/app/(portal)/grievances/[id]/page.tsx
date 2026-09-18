@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { PersonSelect } from '@/components/PersonSelect';
+import { XPostCard } from '@/components/XPostCard';
 import { useCounts, useSession } from '@/components/session';
 import {
   Alert,
@@ -77,6 +78,7 @@ export default function GrievanceDetailPage() {
 
   const map = mapsUrl(post.latitude, post.longitude);
   const mine = post.authorId === me.member.id;
+  const assignedToMe = Boolean(post.isAssignedToMe || (post.assignedToId && post.assignedToId === me.member.id));
 
   return (
     <>
@@ -129,6 +131,8 @@ export default function GrievanceDetailPage() {
             <div style={{ whiteSpace: 'pre-wrap' }}>{post.description || <span className="muted">No description was added.</span>}</div>
           </Card>
 
+          {post.canSummarise ? <XPostCard postId={post.serverId} /> : null}
+
           <Card title="Details">
             <KeyValues
               items={[
@@ -159,6 +163,7 @@ export default function GrievanceDetailPage() {
           <AssignmentPanel
             post={post}
             mine={mine}
+            assignedToMe={assignedToMe}
             onAssigned={async (message) => {
               toast(message);
               refreshCounts();
@@ -176,7 +181,7 @@ export default function GrievanceDetailPage() {
               {post.assignedAt ? (
                 <li>
                   <div>
-                    <b>Assigned to {post.assigneeName}</b>
+                    <b>{assignedToMe ? 'Assigned to you' : `Assigned to ${post.assigneeName}`}</b>
                     <div className="cell-sub">
                       {when(post.assignedAt)}
                       {post.assignedByName ? ` · by ${post.assignedByName}` : ''}
@@ -206,10 +211,12 @@ export default function GrievanceDetailPage() {
 function AssignmentPanel({
   post,
   mine,
+  assignedToMe,
   onAssigned,
 }: {
   post: Grievance;
   mine: boolean;
+  assignedToMe: boolean;
   onAssigned: (message: string) => Promise<void>;
 }) {
   const toast = useToast();
@@ -238,7 +245,20 @@ function AssignmentPanel({
   return (
     <Card title="Assignment" subtitle={canPick ? 'Hand this grievance to an office bearer below you in your area.' : undefined}>
       <div className="stack" style={{ gap: 14 }}>
-        {post.assigneeName ? (
+        {assignedToMe ? (
+          // The assignee knows it's theirs; show who handed it over instead of their own name.
+          <div className="current-assignee">
+            <Avatar name={post.assignedByName || 'Assigned'} size={40} />
+            <div className="grow">
+              <div className="cell-sub">Assigned to you by</div>
+              <div className="cell-main">{post.assignedByName ?? 'A senior office bearer'}</div>
+              <div className="cell-sub">
+                {post.assignedByPostLabel}
+                {post.assignedAt ? `${post.assignedByPostLabel ? ' · ' : ''}${ago(post.assignedAt)}` : ''}
+              </div>
+            </div>
+          </div>
+        ) : post.assigneeName ? (
           <div className="current-assignee">
             <Avatar name={post.assigneeName} size={40} />
             <div className="grow">
@@ -271,7 +291,9 @@ function AssignmentPanel({
           <Alert tone="info">
             {post.status === 'RESOLVED'
               ? 'This grievance is resolved. Reopen it to change who follows it up.'
-              : mine
+              : assignedToMe
+                ? 'This grievance was handed to you to follow up.'
+                : mine
                 ? 'You raised this grievance, so someone senior to you assigns it.'
                 : 'Only someone senior to the person who raised this grievance can assign it.'}
           </Alert>
