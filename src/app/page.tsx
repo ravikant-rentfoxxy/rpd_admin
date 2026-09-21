@@ -3,8 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isSignedIn } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 
 export default function Home() {
+  const t = useT();
   const router = useRouter();
   useEffect(() => {
     router.replace(isSignedIn() ? '/dashboard' : '/login');
@@ -12,7 +14,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
       <div className="row muted">
-        <span className="spinner" /> Opening…
+        <span className="spinner" /> {t('opening')}
       </div>
     </div>
   );

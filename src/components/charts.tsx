@@ -1,5 +1,6 @@
 'use client';
 
+import { intlLocale, useT } from '@/lib/i18n';
 import { useState } from 'react';
 import { ACTIVITY_COLORS, activityType, num, pct } from '@/lib/format';
 
@@ -17,11 +18,12 @@ function niceMax(value: number) {
 }
 
 function shortDay(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return new Date(`${date}T00:00:00`).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short' });
 }
 
 /** Daily activities (with the verified share) and new members over the trend window. */
 export function TrendChart({ points }: { points: TrendPoint[] }) {
+  const t = useT();
   const [hover, setHover] = useState<number | null>(null);
   const max = niceMax(Math.max(1, ...points.map((p) => Math.max(p.activities, p.members))));
   const innerW = W - PAD.left - PAD.right;
@@ -41,24 +43,29 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
         <div className="chart-legend">
           <span>
             <i style={{ background: '#d9d2f0' }} />
-            Activities
+            {t('legend_activities')}
           </span>
           <span>
             <i style={{ background: 'var(--brand-mid)' }} />
-            Verified
+            {t('legend_verified')}
           </span>
           <span>
             <i style={{ background: 'var(--accent)', height: 3, borderRadius: 2, verticalAlign: 3 }} />
-            New members
+            {t('legend_new_members')}
           </span>
         </div>
         <div className="chart-tip num">
           {active
-            ? `${shortDay(active.date)} · ${active.activities} activities · ${active.verified} verified · ${active.members} joined`
-            : 'Hover a day for details'}
+            ? t('chart_tip_day', {
+                day: shortDay(active.date),
+                activities: active.activities,
+                verified: active.verified,
+                members: active.members,
+              })
+            : t('chart_tip_hover')}
         </div>
       </div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Activity trend for the last 30 days">
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('chart_trend_label')}>
         {ticks.map((tick) => (
           <g key={tick}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="#ecebf1" />

@@ -5,6 +5,7 @@ import { Icon } from '@/components/icons';
 import { Alert, Badge, Card, EmptyState, PageHeader, Progress, SearchInput, TableSkeleton } from '@/components/ui';
 import { dash, num, plural, titleCase, type Tone } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 
 type Booth = {
   id: string;
@@ -29,6 +30,7 @@ function healthTone(score: number): Tone {
 }
 
 export default function BoothsPage() {
+  const t = useT();
   const { data, error, loading } = useApi<{ booths: Booth[] }>('/admin/booths');
   const [q, setQ] = useState('');
 
@@ -43,23 +45,23 @@ export default function BoothsPage() {
 
   return (
     <>
-      <PageHeader title="Booths" subtitle="Booths in your area with membership coverage and health score." />
+      <PageHeader title={t('bo_title')} subtitle={t('bo_subtitle')} />
       {error ? <Alert>{error}</Alert> : null}
 
       <Card flush>
         <div className="toolbar">
-          <SearchInput value={q} onChange={setQ} placeholder="Search code, name, village or pincode" />
+          <SearchInput value={q} onChange={setQ} placeholder={t('bo_search')} />
           {data ? <span className="muted small num" style={{ marginLeft: 'auto' }}>{plural(rows.length, 'booth')}</span> : null}
         </div>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Booth</th>
-                <th>Mandal / Assembly</th>
-                <th>Members</th>
-                <th>Coverage</th>
-                <th>Health</th>
+                <th>{t('col_booth')}</th>
+                <th>{t('col_mandal_assembly')}</th>
+                <th>{t('col_members')}</th>
+                <th>{t('col_coverage')}</th>
+                <th>{t('col_health')}</th>
               </tr>
             </thead>
             {!data && loading ? (
@@ -85,7 +87,7 @@ export default function BoothsPage() {
                       </td>
                       <td className="num">
                         <b>{num(row.memberCount)}</b>
-                        <div className="cell-sub">of {num(row.voterCount)} voters</div>
+                        <div className="cell-sub">{t('bo_of_voters', { n: num(row.voterCount) })}</div>
                       </td>
                       <td style={{ minWidth: 140 }}>
                         <div className="small num" style={{ marginBottom: 4 }}>{coverage}%</div>
@@ -106,8 +108,8 @@ export default function BoothsPage() {
         {data && rows.length === 0 ? (
           <EmptyState
             icon={<Icon.Building />}
-            title={q ? 'No booths match' : 'No booths in your area yet'}
-            text={q ? undefined : 'Booths appear here once they are added for your area.'}
+            title={q ? t('bo_empty_filtered') : t('bo_empty')}
+            text={q ? undefined : t('bo_empty_sub')}
           />
         ) : null}
       </Card>

@@ -7,6 +7,7 @@ import { Alert, Badge, Button, Card, ConfirmModal, EmptyState, Field, Modal, Pag
 import { api } from '@/lib/api';
 import { dateRange } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 
 type Option = { id?: string; label: string; isCorrect?: boolean };
 type Question = { id?: string; prompt: string; options: Option[] };
@@ -30,15 +31,17 @@ function toLocal(value: Date) {
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }
 
+/** Returns a dictionary key, so the label follows the chosen language. */
 function liveState(event: EngagementEvent) {
-  if (!event.published) return { label: 'Hidden', tone: 'neutral' as const };
+  if (!event.published) return { key: 'en_state_hidden', live: false, tone: 'neutral' as const };
   const now = Date.now();
-  if (new Date(event.endsAt).getTime() < now) return { label: 'Ended', tone: 'neutral' as const };
-  if (new Date(event.startsAt).getTime() > now) return { label: 'Scheduled', tone: 'brand' as const };
-  return { label: 'Live', tone: 'ok' as const };
+  if (new Date(event.endsAt).getTime() < now) return { key: 'en_state_ended', live: false, tone: 'neutral' as const };
+  if (new Date(event.startsAt).getTime() > now) return { key: 'en_state_scheduled', live: false, tone: 'brand' as const };
+  return { key: 'en_state_live', live: true, tone: 'ok' as const };
 }
 
 export default function EngagementPage() {
+  const t = useT();
   const me = useSession();
   const toast = useToast();
   const { data, error, loading, reload } = useApi<{ events: EngagementEvent[] }>(me.member.isSuperAdmin ? '/admin/engagement-events' : null);
@@ -49,9 +52,9 @@ export default function EngagementPage() {
   if (!me.member.isSuperAdmin) {
     return (
       <>
-        <PageHeader title="Polls & quizzes" />
+        <PageHeader title={t('en_title')} />
         <Card>
-          <EmptyState icon={<Icon.Shield />} title="Super admin only" text="Only a super admin can publish polls and quizzes." />
+          <EmptyState icon={<Icon.Shield />} title={t('en_super_only')} text={t('en_super_only_sub')} />
         </Card>
       </>
     );
@@ -61,10 +64,10 @@ export default function EngagementPage() {
     setBusyId(event.id);
     try {
       await api(`/admin/engagement-events/${event.id}`, { method: 'PATCH', body: JSON.stringify({ published: !event.published }) });
-      toast(event.published ? 'Hidden from members' : 'Published');
+      toast(event.published ? t('toast_hidden') : t('toast_published'));
       await reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not update', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_update'), 'bad');
     } finally {
       setBusyId(null);
     }
@@ -75,11 +78,11 @@ export default function EngagementPage() {
     setBusyId(deleting.id);
     try {
       await api(`/admin/engagement-events/${deleting.id}`, { method: 'DELETE' });
-      toast('Deleted');
+      toast(t('toast_deleted'));
       setDeleting(null);
       await reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not delete', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_delete'), 'bad');
     } finally {
       setBusyId(null);
     }
@@ -90,11 +93,11 @@ export default function EngagementPage() {
   return (
     <>
       <PageHeader
-        title="Polls & quizzes"
-        subtitle="Live polls and quizzes pop up on members' Home screen while they run."
+        title={t('en_title')}
+        subtitle={t('en_subtitle')}
         actions={
           <Button variant="accent" icon={<Icon.Plus />} onClick={() => setCreating(true)}>
-            New poll or quiz
+            {t('en_new')}
           </Button>
         }
       />
@@ -105,11 +108,11 @@ export default function EngagementPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Runs</th>
-                <th>Questions</th>
-                <th>State</th>
+                <th>{t('col_title')}</th>
+                <th>{t('col_type')}</th>
+                <th>{t('col_runs')}</th>
+                <th>{t('col_questions')}</th>
+                <th>{t('col_state')}</th>
                 <th />
               </tr>
             </thead>
@@ -126,21 +129,21 @@ export default function EngagementPage() {
                         <div className="cell-sub clamp-2">{event.description}</div>
                       </td>
                       <td>
-                        <Badge tone={event.type === 'QUIZ' ? 'accent' : 'brand'}>{event.type === 'QUIZ' ? 'Quiz' : 'Poll'}</Badge>
+                        <Badge tone={event.type === 'QUIZ' ? 'accent' : 'brand'}>{event.type === 'QUIZ' ? t('en_quiz') : t('en_poll')}</Badge>
                       </td>
                       <td className="cell-sub">{dateRange(event.startsAt, event.endsAt)}</td>
                       <td className="num">{event.questions.length}</td>
                       <td>
-                        <Badge tone={state.tone} dot={state.label === 'Live'}>
-                          {state.label}
+                        <Badge tone={state.tone} dot={state.live}>
+                          {t(state.key)}
                         </Badge>
                       </td>
                       <td>
                         <div className="row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                           <Button size="sm" loading={busyId === event.id && !deleting} onClick={() => togglePublished(event)}>
-                            {event.published ? 'Hide' : 'Publish'}
+                            {event.published ? t('vi_hide') : t('vi_publish')}
                           </Button>
-                          <button className="icon-btn" aria-label="Delete" onClick={() => setDeleting(event)}>
+                          <button className="icon-btn" aria-label={t('delete')} onClick={() => setDeleting(event)}>
                             <Icon.Trash />
                           </button>
                         </div>
@@ -153,7 +156,7 @@ export default function EngagementPage() {
           </table>
         </div>
         {data && events.length === 0 ? (
-          <EmptyState icon={<Icon.Sparkle />} title="No polls or quizzes yet" text="Create one to engage members on their Home screen." />
+          <EmptyState icon={<Icon.Sparkle />} title={t('en_empty')} text={t('en_empty_sub')} />
         ) : null}
       </Card>
 
@@ -162,21 +165,17 @@ export default function EngagementPage() {
         onClose={() => setCreating(false)}
         onCreated={() => {
           setCreating(false);
-          toast('Published. Members see it on Home while it is live.');
+          toast(t('toast_engagement_published'));
           void reload();
         }}
       />
       <ConfirmModal
         open={Boolean(deleting)}
-        title="Delete this event?"
+        title={t('en_delete_q')}
         danger
         busy={Boolean(deleting) && busyId === deleting?.id}
-        confirmLabel="Delete"
-        message={
-          <>
-            <b>{deleting?.title}</b> will be removed for all members.
-          </>
-        }
+        confirmLabel={t('delete')}
+        message={t('en_delete_msg', { title: deleting?.title ?? '' })}
         onClose={() => setDeleting(null)}
         onConfirm={remove}
       />
@@ -185,6 +184,7 @@ export default function EngagementPage() {
 }
 
 function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const t = useT();
   const [type, setType] = useState<'POLL' | 'QUIZ'>('POLL');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -206,7 +206,7 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 
   async function submit() {
     if (new Date(endsAt) <= new Date(startsAt)) {
-      setError('The end time must be after the start time.');
+      setError(t('en_end_after_start'));
       return;
     }
     setBusy(true);
@@ -232,7 +232,7 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
       setQuestions([emptyQuestion()]);
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not publish');
+      setError(err instanceof Error ? err.message : t('err_could_not_publish'));
     } finally {
       setBusy(false);
     }
@@ -242,40 +242,40 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
     <Modal
       open={open}
       wide
-      title="New poll or quiz"
+      title={t('en_new')}
       onClose={onClose}
       footer={
         <>
-          {quizMissingAnswer ? <span className="small muted" style={{ marginRight: 'auto' }}>Mark the correct answer for every quiz question.</span> : null}
+          {quizMissingAnswer ? <span className="small muted" style={{ marginRight: 'auto' }}>{t('en_mark_correct')}</span> : null}
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button variant="accent" loading={busy} disabled={incomplete || quizMissingAnswer} onClick={submit}>
-            Publish
+            {t('publish')}
           </Button>
         </>
       }
     >
       {error ? <Alert>{error}</Alert> : null}
       <div className="grid-2">
-        <Field label="Type">
+        <Field label={t('field_type')}>
           <select className="select" value={type} onChange={(e) => setType(e.target.value as 'POLL' | 'QUIZ')}>
-            <option value="POLL">Poll — no right answer</option>
-            <option value="QUIZ">Quiz — one correct answer</option>
+            <option value="POLL">{t('en_type_poll')}</option>
+            <option value="QUIZ">{t('en_type_quiz')}</option>
           </select>
         </Field>
-        <Field label="Title">
+        <Field label={t('col_title')}>
           <input className="input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
         </Field>
       </div>
-      <Field label="Description">
+      <Field label={t('field_description')}>
         <textarea className="textarea" value={description} maxLength={2000} rows={2} onChange={(e) => setDescription(e.target.value)} />
       </Field>
       <div className="grid-2">
-        <Field label="Starts">
+        <Field label={t('kv_starts')}>
           <input className="input" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
         </Field>
-        <Field label="Ends">
+        <Field label={t('kv_ends')}>
           <input className="input" type="datetime-local" value={endsAt} min={startsAt} onChange={(e) => setEndsAt(e.target.value)} />
         </Field>
       </div>
@@ -283,16 +283,16 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
       {questions.map((question, index) => (
         <div key={index} className="card card-body" style={{ display: 'grid', gap: 10, background: 'var(--surface-2)' }}>
           <div className="between">
-            <b>Question {index + 1}</b>
+            <b>{t('en_question_n', { n: index + 1 })}</b>
             {questions.length > 1 ? (
-              <button className="icon-btn" aria-label="Remove question" onClick={() => setQuestions((list) => list.filter((_, i) => i !== index))}>
+              <button className="icon-btn" aria-label={t('en_remove_question')} onClick={() => setQuestions((list) => list.filter((_, i) => i !== index))}>
                 <Icon.Trash />
               </button>
             ) : null}
           </div>
           <input
             className="input"
-            placeholder="Ask something"
+            placeholder={t('en_ask_something')}
             value={question.prompt}
             maxLength={400}
             onChange={(e) => updateQuestion(index, { ...question, prompt: e.target.value })}
@@ -301,7 +301,7 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
             <div key={optionIndex} className="row" style={{ flexWrap: 'nowrap' }}>
               <input
                 className="input"
-                placeholder={`Option ${optionIndex + 1}`}
+                placeholder={t('en_option_n', { n: optionIndex + 1 })}
                 value={option.label}
                 maxLength={200}
                 onChange={(e) =>
@@ -324,13 +324,13 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
                       })
                     }
                   />
-                  Correct
+                  {t('en_correct')}
                 </label>
               ) : null}
               {question.options.length > 2 ? (
                 <button
                   className="icon-btn"
-                  aria-label="Remove option"
+                  aria-label={t('en_remove_option')}
                   onClick={() => updateQuestion(index, { ...question, options: question.options.filter((_, i) => i !== optionIndex) })}
                 >
                   <Icon.Close />
@@ -341,7 +341,7 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
           {question.options.length < 8 ? (
             <div>
               <Button size="sm" variant="ghost" icon={<Icon.Plus />} onClick={() => updateQuestion(index, { ...question, options: [...question.options, { label: '' }] })}>
-                Add option
+                {t('en_add_option')}
               </Button>
             </div>
           ) : null}
@@ -350,7 +350,7 @@ function BuilderModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
       {questions.length < 20 ? (
         <div>
           <Button icon={<Icon.Plus />} onClick={() => setQuestions((list) => [...list, emptyQuestion()])}>
-            Add question
+            {t('en_add_question')}
           </Button>
         </div>
       ) : null}

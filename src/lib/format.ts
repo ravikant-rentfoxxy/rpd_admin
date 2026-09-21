@@ -1,3 +1,5 @@
+import { intlLocale, t } from './i18n';
+
 export type Tone = 'brand' | 'accent' | 'ok' | 'warn' | 'bad' | 'neutral';
 
 function toDate(value?: string | Date | null) {
@@ -9,19 +11,19 @@ function toDate(value?: string | Date | null) {
 export function when(value?: string | Date | null) {
   const date = toDate(value);
   if (!date) return '—';
-  return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export function dateOnly(value?: string | Date | null) {
   const date = toDate(value);
   if (!date) return '—';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function timeOnly(value?: string | Date | null) {
   const date = toDate(value);
   if (!date) return '—';
-  return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleTimeString(intlLocale(), { hour: 'numeric', minute: '2-digit' });
 }
 
 /** "5 min ago", "3 h ago", "2 days ago", falling back to a date after a week. */
@@ -30,12 +32,12 @@ export function ago(value?: string | Date | null) {
   if (!date) return '—';
   const diff = Date.now() - date.getTime();
   const minutes = Math.round(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return t('just_now');
+  if (minutes < 60) return t('min_ago', { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return t('hours_ago', { n: hours });
   const days = Math.round(hours / 24);
-  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+  if (days < 7) return days === 1 ? t('day_ago') : t('days_ago', { n: days });
   return dateOnly(date);
 }
 
@@ -54,12 +56,17 @@ export function dash(value?: string | number | null) {
 }
 
 export function num(value?: number | null) {
-  return (value ?? 0).toLocaleString('en-IN');
+  return (value ?? 0).toLocaleString(intlLocale());
 }
 
-/** "1 event", "3 events"; pass the plural when it is not just word + "s". */
-export function plural(count: number, word: string, many = `${word}s`) {
-  return `${count.toLocaleString('en-IN')} ${count === 1 ? word : many}`;
+/**
+ * "1 event", "3 events" in the active language.
+ *
+ * `key` names a pair of dictionary entries — `count_<key>_one` and
+ * `count_<key>_other` — each taking an `@n` placeholder.
+ */
+export function plural(count: number, key: string) {
+  return t(`count_${key}_${count === 1 ? 'one' : 'other'}`, { n: count.toLocaleString(intlLocale()) });
 }
 
 export function pct(part: number, total: number) {
@@ -88,39 +95,44 @@ export function titleCase(code?: string | null) {
     .join(' ');
 }
 
-export const POST_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'Super Admin',
-  NATIONAL_PRESIDENT: 'National President',
-  NATIONAL_GENERAL_SECRETARY: 'National General Secretary',
-  STATE_PRESIDENT: 'State President',
-  STATE_GENERAL_SECRETARY: 'State General Secretary',
-  REGIONAL_PRESIDENT: 'Regional President',
-  DISTRICT_PRESIDENT: 'District President',
-  DISTRICT_GENERAL_SECRETARY: 'District General Secretary',
-  DISTRICT_SECRETARY: 'District Secretary',
-  ASSEMBLY_IN_CHARGE: 'Assembly In-charge',
-  MANDAL_PRESIDENT: 'Mandal President',
-  BOOTH_ADHYAKSH: 'Booth Adhyaksh',
-  PANNA_PRAMUKH: 'Panna Pramukh',
-  MEMBER: 'Member',
-};
+const POST_CODES = [
+  'SUPER_ADMIN',
+  'NATIONAL_PRESIDENT',
+  'NATIONAL_GENERAL_SECRETARY',
+  'STATE_PRESIDENT',
+  'STATE_GENERAL_SECRETARY',
+  'REGIONAL_PRESIDENT',
+  'DISTRICT_PRESIDENT',
+  'DISTRICT_GENERAL_SECRETARY',
+  'DISTRICT_SECRETARY',
+  'ASSEMBLY_IN_CHARGE',
+  'MANDAL_PRESIDENT',
+  'BOOTH_ADHYAKSH',
+  'PANNA_PRAMUKH',
+  'MEMBER',
+];
 
-export function postTitle(code?: string | null) {
-  if (!code) return 'Member';
-  return POST_LABELS[code] ?? titleCase(code);
+/**
+ * Label maps are functions, not constants, because the text changes with the
+ * language. Call them at render time: `POST_LABELS()[code]`.
+ */
+export function POST_LABELS(): Record<string, string> {
+  return Object.fromEntries(POST_CODES.map((code) => [code, t(`post_${code}`)]));
 }
 
-export const ACTIVITY_TYPES: Record<string, string> = {
-  MEETING: 'Meeting',
-  GRIHA_SAMPARK: 'Griha sampark',
-  PUBLIC_PROGRAMME: 'Public programme',
-  TRAINING: 'Training',
-  ADD_MEMBER: 'Member added',
-  OTHER: 'Other',
-};
+export function postTitle(code?: string | null) {
+  if (!code) return t('post_MEMBER');
+  return POST_CODES.includes(code) ? t(`post_${code}`) : titleCase(code);
+}
+
+const ACTIVITY_CODES = ['MEETING', 'GRIHA_SAMPARK', 'PUBLIC_PROGRAMME', 'TRAINING', 'ADD_MEMBER', 'OTHER'];
+
+export function ACTIVITY_TYPES(): Record<string, string> {
+  return Object.fromEntries(ACTIVITY_CODES.map((code) => [code, t(`activity_${code}`)]));
+}
 
 export function activityType(code?: string | null) {
-  return (code && ACTIVITY_TYPES[code]) || titleCase(code);
+  return code && ACTIVITY_CODES.includes(code) ? t(`activity_${code}`) : titleCase(code);
 }
 
 export const ACTIVITY_COLORS: Record<string, string> = {
@@ -132,39 +144,45 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   OTHER: '#9a94a6',
 };
 
-export const ACTIVITY_STATUS: Record<string, { label: string; tone: Tone }> = {
-  QUEUED: { label: 'Awaiting review', tone: 'warn' },
-  UPLOADED: { label: 'Awaiting review', tone: 'warn' },
-  PENDING_VERIFICATION: { label: 'Awaiting review', tone: 'warn' },
-  VERIFIED: { label: 'Verified', tone: 'ok' },
-  NOT_VERIFIED: { label: 'Rejected', tone: 'bad' },
-  APPEALED: { label: 'Appealed', tone: 'accent' },
-};
+export function ACTIVITY_STATUS(): Record<string, { label: string; tone: Tone }> {
+  return {
+    QUEUED: { label: t('status_awaiting_review'), tone: 'warn' },
+    UPLOADED: { label: t('status_awaiting_review'), tone: 'warn' },
+    PENDING_VERIFICATION: { label: t('status_awaiting_review'), tone: 'warn' },
+    VERIFIED: { label: t('status_verified'), tone: 'ok' },
+    NOT_VERIFIED: { label: t('status_rejected'), tone: 'bad' },
+    APPEALED: { label: t('status_appealed'), tone: 'accent' },
+  };
+}
 
-export const MEMBER_STATUS: Record<string, { label: string; tone: Tone }> = {
-  DRAFT: { label: 'Draft', tone: 'neutral' },
-  PENDING: { label: 'Pending', tone: 'warn' },
-  VERIFIED: { label: 'Verified', tone: 'ok' },
-  REJECTED: { label: 'Rejected', tone: 'bad' },
-  SUSPENDED: { label: 'Suspended', tone: 'bad' },
-  WITHDRAWN: { label: 'Withdrawn', tone: 'neutral' },
-};
+export function MEMBER_STATUS(): Record<string, { label: string; tone: Tone }> {
+  return {
+    DRAFT: { label: t('status_draft'), tone: 'neutral' },
+    PENDING: { label: t('status_pending'), tone: 'warn' },
+    VERIFIED: { label: t('status_verified'), tone: 'ok' },
+    REJECTED: { label: t('status_rejected'), tone: 'bad' },
+    SUSPENDED: { label: t('status_suspended'), tone: 'bad' },
+    WITHDRAWN: { label: t('status_withdrawn'), tone: 'neutral' },
+  };
+}
 
-export const EVENT_PHASE: Record<string, { label: string; tone: Tone }> = {
-  UPCOMING: { label: 'Upcoming', tone: 'brand' },
-  LIVE: { label: 'Live now', tone: 'ok' },
-  ENDED: { label: 'Ended', tone: 'neutral' },
-};
+export function EVENT_PHASE(): Record<string, { label: string; tone: Tone }> {
+  return {
+    UPCOMING: { label: t('phase_upcoming'), tone: 'brand' },
+    LIVE: { label: t('phase_live'), tone: 'ok' },
+    ENDED: { label: t('phase_ended'), tone: 'neutral' },
+  };
+}
 
-export const AREA_LEVEL: Record<string, string> = {
-  NATIONAL: 'National',
-  STATE: 'State',
-  REGION: 'Region',
-  DISTRICT: 'District',
-  ASSEMBLY: 'Assembly',
-  MANDAL: 'Mandal',
-  BOOTH: 'Booth',
-};
+const AREA_CODES = ['NATIONAL', 'STATE', 'REGION', 'DISTRICT', 'ASSEMBLY', 'MANDAL', 'BOOTH'];
+
+export function AREA_LEVEL(): Record<string, string> {
+  return Object.fromEntries(AREA_CODES.map((code) => [code, t(`area_${code}`)]));
+}
+
+export function areaLevel(code?: string | null) {
+  return code && AREA_CODES.includes(code) ? t(`area_${code}`) : code ?? '';
+}
 
 /** Grievance issue bands from the post_issues table: VERY_HIGH, HIGH, MEDIUM, LOW. */
 export function bandTone(band?: string | null): Tone {
@@ -183,8 +201,10 @@ export function bandTone(band?: string | null): Tone {
 }
 
 export function bandLabel(band?: string | null) {
-  if (!band) return 'Unrated';
-  return `${titleCase(band)} priority`;
+  if (!band) return t('band_unrated');
+  const code = band.toUpperCase();
+  const name = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'].includes(code) ? t(`band_${code}`) : titleCase(band);
+  return t('band_priority', { band: name });
 }
 
 export function mapsUrl(lat?: number | null, lng?: number | null, fallback?: string | null) {

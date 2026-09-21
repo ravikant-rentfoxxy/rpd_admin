@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { Icon } from './icons';
 import { Alert, Button, Card, useToast } from './ui';
 
@@ -31,6 +32,7 @@ function Highlighted({ text }: { text: string }) {
  * mobile app's "Summary by AI" uses.
  */
 export function XPostCard({ postId }: { postId: string }) {
+  const t = useT();
   const toast = useToast();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,12 +45,12 @@ export function XPostCard({ postId }: { postId: string }) {
     try {
       const data = await api<{ summary: string }>(`/posts/${postId}/summary`, { method: 'POST' });
       if (!data.summary?.trim()) {
-        setError('The AI could not write a post for this grievance. Try again.');
+        setError(t('x_err_empty'));
         return;
       }
       setText(data.summary.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not write the post');
+      setError(err instanceof Error ? err.message : t('x_err_failed'));
     } finally {
       setBusy(false);
     }
@@ -60,7 +62,7 @@ export function XPostCard({ postId }: { postId: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast('Could not copy. Select the text and copy it manually.', 'bad');
+      toast(t('x_err_copy'), 'bad');
     }
   }
 
@@ -74,10 +76,10 @@ export function XPostCard({ postId }: { postId: string }) {
           <span style={{ width: 16, display: 'inline-flex', color: 'var(--accent)' }}>
             <Icon.Sparkle />
           </span>
-          Post for X
+          {t('x_title')}
         </span>
       }
-      subtitle="Written by AI from this grievance, with the responsible departments tagged."
+      subtitle={t('x_subtitle')}
     >
       {error ? <Alert>{error}</Alert> : null}
 
@@ -88,9 +90,10 @@ export function XPostCard({ postId }: { postId: string }) {
           </div>
           <div className="between">
             <span className={`small num ${over ? 'strong' : 'muted'}`} style={over ? { color: 'var(--bad)' } : undefined}>
-              {length}/{X_LIMIT} characters{over ? ' · too long for X' : ''}
+              {t('x_chars', { n: length, limit: X_LIMIT })}
+              {over ? t('x_too_long') : ''}
             </span>
-            <span className="small muted">Check before posting</span>
+            <span className="small muted">{t('x_check_first')}</span>
           </div>
           <div className="row">
             <a
@@ -100,25 +103,24 @@ export function XPostCard({ postId }: { postId: string }) {
               rel="noreferrer"
             >
               <Icon.External />
-              Post on X
+              {t('x_post_on_x')}
             </a>
             <Button icon={copied ? <Icon.Check /> : undefined} onClick={copy}>
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('x_copied') : t('x_copy')}
             </Button>
             <Button variant="ghost" icon={<Icon.Refresh />} loading={busy} onClick={generate}>
-              Rewrite
+              {t('x_rewrite')}
             </Button>
           </div>
         </div>
       ) : (
         <div className="stack" style={{ gap: 12 }}>
           <p className="muted" style={{ margin: 0 }}>
-            The AI reads this grievance and writes one short message for X, under 280 characters, tagging the departments
-            responsible for this kind of issue.
+            {t('x_intro')}
           </p>
           <div>
             <Button variant="accent" icon={<Icon.Sparkle />} loading={busy} onClick={generate}>
-              {busy ? 'Writing…' : 'Write post with AI'}
+              {busy ? t('x_writing') : t('x_write')}
             </Button>
           </div>
         </div>

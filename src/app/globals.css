@@ -56,8 +56,8 @@ img { max-width: 100%; display: block; }
 .small { font-size: 12px; }
 .strong { font-weight: 650; }
 .nowrap { white-space: nowrap; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; overflow-wrap: anywhere; }
 .link { color: var(--brand-mid); font-weight: 600; }
 .link:hover { text-decoration: underline; }
 
@@ -187,7 +187,7 @@ a.stat:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
 
 /* ---------- Badge ---------- */
 .badge {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
   padding: 2px 9px; border-radius: 99px;
   font-size: 11.5px; font-weight: 650; white-space: nowrap; line-height: 18px;
 }
@@ -394,6 +394,14 @@ a.list-item:hover { background: var(--surface-2); }
 .event-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); padding: 14px; }
 .event-card { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); transition: box-shadow 0.15s, border-color 0.15s; align-content: start; }
 .event-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+.event-card, .event-card > * { min-width: 0; }
+/* Two columns: a fixed icon gutter and a text column pinned to minmax(0, 1fr).
+   The explicit 0 minimum is what lets long venue names wrap or ellipsize instead
+   of forcing the card wider than its grid track. */
+.event-meta { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 3px 6px; align-items: start; font-size: 12.5px; color: var(--muted); }
+.event-meta-icon { display: grid; place-items: center; height: 18px; color: var(--muted); }
+.event-meta-icon svg { width: 14px; height: 14px; }
+.event-meta-wrap { overflow-wrap: anywhere; }
 .event-date { width: 48px; flex: none; text-align: center; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
 .event-date small { display: block; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 0; }
 .event-date b { display: block; font-size: 18px; padding: 3px 0; }
@@ -458,3 +466,23 @@ a.list-item:hover { background: var(--surface-2); }
   .grid-stats { grid-template-columns: minmax(0, 1fr); }
   .toolbar .input-icon { max-width: none; }
 }
+
+/* Language pill — mirrors the picker in the RPD app's app bars. */
+.lang-pill {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 12.5px; color: var(--text-2); flex: none;
+}
+.lang-pill svg { width: 15px; height: 15px; color: var(--accent); }
+.lang-pill b { color: var(--text); font-weight: 700; letter-spacing: 0.02em; }
+.lang-pill select {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; border: 0; appearance: none;
+}
+.lang-pill:focus-within { border-color: var(--brand-mid); box-shadow: 0 0 0 3px rgba(58, 38, 133, 0.12); }
+.lang-pill[data-on-dark] {
+  background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.35); color: #fff;
+}
+.lang-pill[data-on-dark] b { color: #fff; }
+.lang-pill[data-on-dark] svg { color: #fff; }

@@ -7,11 +7,13 @@ import { Alert, Badge, Card, EmptyState, PageHeader, Pagination, SearchInput, Ta
 import { withQuery } from '@/lib/api';
 import { ACTIVITY_COLORS, ACTIVITY_STATUS, ACTIVITY_TYPES, activityType, dash, plural, when } from '@/lib/format';
 import { useApi, useDebounced } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { ActivityRow, Paged } from '@/lib/types';
 
 const PAGE_SIZE = 25;
 
 export default function ActivitiesPage() {
+  const t = useT();
   const [q, setQ] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
@@ -43,41 +45,41 @@ export default function ActivitiesPage() {
 
   return (
     <>
-      <PageHeader title="Activities" subtitle="Every activity recorded by members in your area." />
+      <PageHeader title={t('act_title')} subtitle={t('act_subtitle')} />
       {error ? <Alert>{error}</Alert> : null}
 
       <Card flush>
         <div className="toolbar">
-          <SearchInput value={q} onChange={setQ} placeholder="Search member, membership no. or notes" />
-          <select className="select" value={type} onChange={(e) => setType(e.target.value)} aria-label="Activity type">
-            <option value="">All types</option>
-            {Object.entries(ACTIVITY_TYPES).map(([value, label]) => (
+          <SearchInput value={q} onChange={setQ} placeholder={t('act_search')} />
+          <select className="select" value={type} onChange={(e) => setType(e.target.value)} aria-label={t('act_type_label')}>
+            <option value="">{t('act_all_types')}</option>
+            {Object.entries(ACTIVITY_TYPES()).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
-          <select className="select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-            <option value="">Any status</option>
-            <option value="AWAITING">Awaiting review</option>
-            <option value="VERIFIED">Verified</option>
-            <option value="NOT_VERIFIED">Rejected</option>
-            <option value="APPEALED">Appealed</option>
+          <select className="select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label={t('status_label')}>
+            <option value="">{t('any_status')}</option>
+            <option value="AWAITING">{t('status_awaiting_review')}</option>
+            <option value="VERIFIED">{t('status_verified')}</option>
+            <option value="NOT_VERIFIED">{t('status_rejected')}</option>
+            <option value="APPEALED">{t('status_appealed')}</option>
           </select>
-          <input className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} aria-label="From date" />
-          <input className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-label="To date" />
-          {data ? <span className="muted small num" style={{ marginLeft: 'auto' }}>{plural(data.total, 'activity', 'activities')}</span> : null}
+          <input className="input" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} aria-label={t('from_date')} />
+          <input className="input" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-label={t('to_date')} />
+          {data ? <span className="muted small num" style={{ marginLeft: 'auto' }}>{plural(data.total, 'activity')}</span> : null}
         </div>
 
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Activity</th>
-                <th>Member</th>
-                <th>Booth</th>
-                <th>Details</th>
-                <th>Status</th>
+                <th>{t('col_activity')}</th>
+                <th>{t('col_member')}</th>
+                <th>{t('col_booth')}</th>
+                <th>{t('col_details')}</th>
+                <th>{t('col_status')}</th>
               </tr>
             </thead>
             {!data && loading ? (
@@ -85,12 +87,12 @@ export default function ActivitiesPage() {
             ) : (
               <tbody>
                 {rows.map((row) => {
-                  const badge = ACTIVITY_STATUS[row.status];
+                  const badge = ACTIVITY_STATUS()[row.status];
                   const color = ACTIVITY_COLORS[row.type] ?? '#9a94a6';
                   const details = [
                     row.attendeeCount ? plural(row.attendeeCount, 'attendee') : '',
                     row.homesCovered ? plural(row.homesCovered, 'home') : '',
-                    row.photoCount ? `${row.photoCount} photo${row.photoCount === 1 ? '' : 's'}` : '',
+                    row.photoCount ? plural(row.photoCount, 'photo') : '',
                   ]
                     .filter(Boolean)
                     .join(' · ');
@@ -115,7 +117,7 @@ export default function ActivitiesPage() {
                       <td className="cell-sub">
                         {details || '—'}
                         {row.reviewFlag ? (
-                          <span title="Flagged for review" style={{ color: 'var(--warn)', marginLeft: 6, verticalAlign: -3, display: 'inline-block', width: 15 }}>
+                          <span title={t('flagged_for_review')} style={{ color: 'var(--warn)', marginLeft: 6, verticalAlign: -3, display: 'inline-block', width: 15 }}>
                             <Icon.Flag />
                           </span>
                         ) : null}
@@ -131,8 +133,8 @@ export default function ActivitiesPage() {
         {data && rows.length === 0 ? (
           <EmptyState
             icon={<Icon.Activity />}
-            title={filtered ? 'No activities match these filters' : 'No activities yet'}
-            text={filtered ? 'Try widening the date range or clearing a filter.' : 'Activities recorded in the RPD app will appear here.'}
+            title={filtered ? t('act_empty_filtered') : t('act_empty')}
+            text={filtered ? t('act_empty_filtered_sub') : t('act_empty_sub')}
           />
         ) : null}
         {data ? <Pagination page={data.page} limit={data.limit} total={data.total} onPage={setPage} /> : null}

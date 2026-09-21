@@ -3,11 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Alert, Button } from '@/components/ui';
 import { publicApi } from '@/lib/api';
 import { isSignedIn, setTokens } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 
 export default function LoginPage() {
+  const t = useT();
   const router = useRouter();
   const [mobile, setMobile] = useState('');
   const [code, setCode] = useState('');
@@ -29,7 +32,7 @@ export default function LoginPage() {
   async function sendOtp(event?: FormEvent) {
     event?.preventDefault();
     if (mobile.length !== 10) {
-      setError('Enter your 10-digit mobile number.');
+      setError(t('err_mobile_10'));
       return;
     }
     setBusy(true);
@@ -40,7 +43,7 @@ export default function LoginPage() {
       setCode('');
       setResendIn(data.resendIn ?? 30);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send OTP');
+      setError(err instanceof Error ? err.message : t('err_send_otp'));
     } finally {
       setBusy(false);
     }
@@ -49,7 +52,7 @@ export default function LoginPage() {
   async function verify(event: FormEvent) {
     event.preventDefault();
     if (code.length !== 6) {
-      setError('Enter the 6-digit OTP.');
+      setError(t('err_otp_6'));
       return;
     }
     setBusy(true);
@@ -59,7 +62,7 @@ export default function LoginPage() {
       setTokens(data.tokens.accessToken, data.tokens.refreshToken);
       router.replace('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not verify OTP');
+      setError(err instanceof Error ? err.message : t('err_verify_otp'));
       setBusy(false);
     }
   }
@@ -70,43 +73,44 @@ export default function LoginPage() {
         <div className="sidebar-brand" style={{ padding: 0 }}>
           <div className="sidebar-logo">RPD</div>
           <div>
-            <b>RPD Admin</b>
-            <span>Sangathan portal</span>
+            <b>{t('app_name')}</b>
+            <span>{t('app_tag')}</span>
           </div>
         </div>
         <div>
-          <h2>Lead your area with a clear view of every activity.</h2>
-          <p>Review field work, follow up on grievances, and track attendance for the members below you.</p>
+          <h2>{t('login_lede')}</h2>
+          <p>{t('login_sub')}</p>
           <ul className="auth-points">
             <li>
-              <Icon.CheckShield /> Verify activities recorded in your area
+              <Icon.CheckShield /> {t('login_point_verify')}
             </li>
             <li>
-              <Icon.Megaphone /> Assign and resolve public grievances
+              <Icon.Megaphone /> {t('login_point_grievance')}
             </li>
             <li>
-              <Icon.Calendar /> See who joined and checked in to events
+              <Icon.Calendar /> {t('login_point_events')}
             </li>
             <li>
-              <Icon.Users /> Manage members and assign posts
+              <Icon.Users /> {t('login_point_members')}
             </li>
           </ul>
         </div>
-        <p style={{ fontSize: 12.5 }}>For office bearers only · Panna Pramukh and above</p>
+        <p style={{ fontSize: 12.5 }}>{t('login_footnote')}</p>
       </section>
 
       <section className="auth-form">
         <form className="auth-card" onSubmit={sent ? verify : sendOtp} noValidate>
-          <div>
-            <h1>{sent ? 'Enter OTP' : 'Sign in'}</h1>
+          <div className="between">
+            <h1>{sent ? t('enter_otp') : t('sign_in')}</h1>
+            <LanguageSwitcher />
           </div>
           <p className="auth-sub">
             {sent ? (
               <>
-                We sent a 6-digit code to <b>+91 {mobile}</b>.
+                {t('otp_sent_to')} <b>+91 {mobile}</b>.
               </>
             ) : (
-              'Use the mobile number registered in the RPD app.'
+              t('use_registered_number')
             )}
           </p>
 
@@ -114,7 +118,7 @@ export default function LoginPage() {
 
           {!sent ? (
             <label className="field">
-              <span>Mobile number</span>
+              <span>{t('mobile_number')}</span>
               <div className="phone">
                 <span>+91</span>
                 <input
@@ -129,7 +133,7 @@ export default function LoginPage() {
             </label>
           ) : (
             <label className="field">
-              <span>One-time password</span>
+              <span>{t('one_time_password')}</span>
               <input
                 className="input otp-input num"
                 value={code}
@@ -143,7 +147,7 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" variant="primary" className="btn-block" loading={busy}>
-            {sent ? 'Verify and continue' : 'Send OTP'}
+            {sent ? t('verify_and_continue') : t('send_otp')}
           </Button>
 
           {sent ? (
@@ -157,10 +161,10 @@ export default function LoginPage() {
                   setError('');
                 }}
               >
-                Change number
+                {t('change_number')}
               </button>
               <button type="button" className="btn btn-ghost btn-sm" disabled={resendIn > 0 || busy} onClick={() => sendOtp()}>
-                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend OTP'}
+                {resendIn > 0 ? t('resend_in', { n: resendIn }) : t('resend_otp')}
               </button>
             </div>
           ) : null}

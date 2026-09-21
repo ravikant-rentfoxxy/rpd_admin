@@ -43,7 +43,10 @@ async function send(input: string, init: RequestInit) {
 
 export async function api<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
-  if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
+  // FormData must set its own Content-Type so the multipart boundary survives.
+  if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   const token = getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   const res = await send(`${API}${path}`, { ...init, headers });
@@ -85,6 +88,55 @@ async function doRefresh() {
   }
 }
 
+type UploadOptions = { method?: string; onProgress?: (percent: number) => void };
+
+/** Multipart upload. Uses XHR because fetch() cannot report upload progress. */
+export function upload<T>(path: string, form: FormData, options: UploadOptions = {}): Promise<T> {
+  return sendUpload<T>(path, form, options, true);
+}
+
+function sendUpload<T>(path: string, form: FormData, options: UploadOptions, retry: boolean): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method ?? 'POST', `${API}${path}`);
+    const token = getAccessToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onerror = () => reject(new ApiError(0, 'Cannot reach the RPD server. Check your connection and try again.'));
+    xhr.onload = () => {
+      if (xhr.status === 401 && retry) {
+        void refreshTokens().then((refreshed) => {
+          if (refreshed) {
+            resolve(sendUpload<T>(path, form, options, false));
+            return;
+          }
+          clearSession();
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          reject(new ApiError(401, 'Your session expired. Sign in again.'));
+        });
+        return;
+      }
+      let body: Envelope<T> | null = null;
+      try {
+        body = JSON.parse(xhr.responseText) as Envelope<T>;
+      } catch {
+        body = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body && body.ok) {
+        resolve(body.data);
+        return;
+      }
+      reject(new ApiError(xhr.status, body && body.ok === false ? body.error.message : `Upload failed (${xhr.status})`));
+    };
+    xhr.send(form);
+  });
+}
+
 async function publicPost<T>(path: string, body: unknown) {
   const res = await send(`${API}${path}`, {
     method: 'POST',
@@ -98,7 +150,7 @@ export const publicApi = {
   requestOtp(mobile: string) {
     return publicPost<{ challengeId: string; expiresIn: number; resendIn: number }>('/admin/auth/otp/request', {
       mobile,
-      channel: 'SMS',
+      channel: 'WHATSAPP',
     });
   },
   verifyOtp(mobile: string, code: string) {

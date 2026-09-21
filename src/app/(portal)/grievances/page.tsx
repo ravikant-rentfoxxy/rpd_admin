@@ -2,13 +2,15 @@
 
 import { GrievanceList } from '@/components/GrievanceList';
 import { PageHeader } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 
 export default function GrievancesPage() {
+  const t = useT();
   return (
     <>
       <PageHeader
-        title="Grievances"
-        subtitle="Public issues raised by members in your area. Open one to assign it to an office bearer below you."
+        title={t('gr_title')}
+        subtitle={t('gr_subtitle')}
       />
       <GrievanceList />
     </>

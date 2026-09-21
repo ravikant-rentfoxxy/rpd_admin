@@ -25,11 +25,13 @@ import {
 import { api, withQuery } from '@/lib/api';
 import { ago, dash, plural, when } from '@/lib/format';
 import { useApi, useDebounced } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { Paged, TaskDetail, TaskRow } from '@/lib/types';
 
 const PAGE_SIZE = 25;
 
 export default function TasksPage() {
+  const t = useT();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -47,11 +49,11 @@ export default function TasksPage() {
   return (
     <>
       <PageHeader
-        title="Tasks"
-        subtitle="Work handed out to members in your area, and how many have started it."
+        title={t('ta_title')}
+        subtitle={t('ta_subtitle')}
         actions={
           <Button variant="accent" icon={<Icon.Plus />} onClick={() => setCreating(true)}>
-            New task
+            {t('ta_new')}
           </Button>
         }
       />
@@ -59,17 +61,17 @@ export default function TasksPage() {
 
       <Card flush>
         <div className="toolbar">
-          <SearchInput value={q} onChange={setQ} placeholder="Search tasks" />
+          <SearchInput value={q} onChange={setQ} placeholder={t('ta_search')} />
           {data ? <span className="muted small num" style={{ marginLeft: 'auto' }}>{plural(data.total, 'task')}</span> : null}
         </div>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Task</th>
-                <th>Given by</th>
-                <th>Created</th>
-                <th>Started by</th>
+                <th>{t('col_task')}</th>
+                <th>{t('col_given_by')}</th>
+                <th>{t('col_created')}</th>
+                <th>{t('col_started_by')}</th>
               </tr>
             </thead>
             {!data && loading ? (
@@ -89,7 +91,7 @@ export default function TasksPage() {
                     <td className="cell-sub nowrap">{ago(row.createdAt)}</td>
                     <td>
                       <Badge tone={row.started ? 'ok' : 'neutral'}>
-                        {row.started} member{row.started === 1 ? '' : 's'}
+                        {plural(row.started, 'member')}
                       </Badge>
                     </td>
                   </tr>
@@ -101,12 +103,12 @@ export default function TasksPage() {
         {data && rows.length === 0 ? (
           <EmptyState
             icon={<Icon.Clipboard />}
-            title={search ? 'No tasks match' : 'No tasks yet'}
-            text={search ? undefined : 'Create a task to hand out work to members below you.'}
+            title={search ? t('ta_empty_filtered') : t('ta_empty')}
+            text={search ? undefined : t('ta_empty_sub')}
             action={
               search ? undefined : (
                 <Button variant="accent" icon={<Icon.Plus />} onClick={() => setCreating(true)}>
-                  New task
+                  {t('ta_new')}
                 </Button>
               )
             }
@@ -120,7 +122,7 @@ export default function TasksPage() {
         onClose={() => setOpenId(null)}
         onRemoved={() => {
           setOpenId(null);
-          toast('Task removed');
+          toast(t('toast_task_removed'));
           void reload();
         }}
       />
@@ -129,7 +131,7 @@ export default function TasksPage() {
         onClose={() => setCreating(false)}
         onCreated={() => {
           setCreating(false);
-          toast('Task created. Members below you in your area can now start it.');
+          toast(t('toast_task_created'));
           void reload();
         }}
       />
@@ -138,6 +140,7 @@ export default function TasksPage() {
 }
 
 function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onClose: () => void; onRemoved: () => void }) {
+  const t = useT();
   const toast = useToast();
   const { data, error } = useApi<{ task: TaskDetail }>(taskId ? `/admin/tasks/${taskId}` : null);
   const [confirming, setConfirming] = useState(false);
@@ -152,7 +155,7 @@ function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onC
       setConfirming(false);
       onRemoved();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not remove', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_remove'), 'bad');
     } finally {
       setBusy(false);
     }
@@ -161,12 +164,12 @@ function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onC
   return (
     <Drawer
       open={Boolean(taskId)}
-      title="Task"
+      title={t('ta_task')}
       onClose={onClose}
       footer={
         task?.canManage ? (
           <Button variant="danger" icon={<Icon.Trash />} onClick={() => setConfirming(true)}>
-            Remove task
+            {t('ta_remove')}
           </Button>
         ) : undefined
       }
@@ -187,16 +190,16 @@ function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onC
           </div>
           <KeyValues
             items={[
-              ['Given by', <Link key="h" className="link" href={`/members/${task.host.id}`}>{task.host.fullName}</Link>],
-              ['Post', task.host.post],
-              ['Created', when(task.createdAt)],
-              ['Started by', `${task.starters.length} member${task.starters.length === 1 ? '' : 's'}`],
+              [t('col_given_by'), <Link key="h" className="link" href={`/members/${task.host.id}`}>{task.host.fullName}</Link>],
+              [t('col_post'), task.host.post],
+              [t('col_created'), when(task.createdAt)],
+              [t('col_started_by'), plural(task.starters.length, 'member')],
             ]}
           />
           <div>
-            <p className="section-title">Members who started</p>
+            <p className="section-title">{t('ta_started_section')}</p>
             {task.starters.length === 0 ? (
-              <div className="muted">No one has started this task yet.</div>
+              <div className="muted">{t('ta_no_starters')}</div>
             ) : (
               <ul className="list card">
                 {task.starters.map((row) => (
@@ -216,15 +219,11 @@ function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onC
           </div>
           <ConfirmModal
             open={confirming}
-            title="Remove task?"
+            title={t('ta_remove_q')}
             danger
             busy={busy}
-            confirmLabel="Remove task"
-            message={
-              <>
-                <b>{task.title}</b> will disappear from the Work tab for everyone.
-              </>
-            }
+            confirmLabel={t('ta_remove')}
+            message={t('ta_remove_msg', { title: task.title })}
             onClose={() => setConfirming(false)}
             onConfirm={remove}
           />
@@ -235,6 +234,7 @@ function TaskDrawer({ taskId, onClose, onRemoved }: { taskId: string | null; onC
 }
 
 function NewTaskModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const t = useT();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
@@ -259,7 +259,7 @@ function NewTaskModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
       });
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create task');
+      setError(err instanceof Error ? err.message : t('err_could_not_create_task'));
     } finally {
       setBusy(false);
     }
@@ -268,27 +268,27 @@ function NewTaskModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
   return (
     <Modal
       open={open}
-      title="New task"
+      title={t('ta_new')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button variant="accent" loading={busy} disabled={title.trim().length < 2} onClick={save}>
-            Create task
+            {t('ta_create')}
           </Button>
         </>
       }
     >
       {error ? <Alert>{error}</Alert> : null}
-      <Field label="Title">
-        <input className="input" value={title} maxLength={200} autoFocus placeholder="e.g. Visit 20 homes in your booth" onChange={(e) => setTitle(e.target.value)} />
+      <Field label={t('ta_field_title')}>
+        <input className="input" value={title} maxLength={200} autoFocus placeholder={t('ta_title_placeholder')} onChange={(e) => setTitle(e.target.value)} />
       </Field>
-      <Field label="Details (optional)">
-        <textarea className="textarea" value={description} maxLength={2000} placeholder="What should members do?" onChange={(e) => setDescription(e.target.value)} />
+      <Field label={t('ta_field_details')}>
+        <textarea className="textarea" value={description} maxLength={2000} placeholder={t('ta_details_placeholder')} onChange={(e) => setDescription(e.target.value)} />
       </Field>
-      <Alert tone="info">Members below your post in your area will see this in their Work tab.</Alert>
+      <Alert tone="info">{t('ta_visibility_note')}</Alert>
     </Modal>
   );
 }

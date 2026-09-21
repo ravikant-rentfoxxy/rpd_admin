@@ -217,4 +217,10 @@ export const Icon = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </Base>
   ),
+  Globe: (p: IconProps) => (
+    <Base {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20a15.3 15.3 0 0 1 0-20z" />
+    </Base>
+  ),
 };

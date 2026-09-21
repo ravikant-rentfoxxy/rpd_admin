@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { withQuery } from '@/lib/api';
 import { ago, bandLabel, bandTone, num } from '@/lib/format';
 import { useApi, useDebounced } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { Grievance, Paged } from '@/lib/types';
 import { Icon } from './icons';
 import { Alert, Avatar, Badge, Card, EmptyState, Pagination, SearchInput, Segmented, TableSkeleton } from './ui';
@@ -22,6 +23,7 @@ function MediaIcon({ type }: { type: string }) {
 
 /** Grievance table. With `mine`, it lists only grievances handed to the signed-in officer. */
 export function GrievanceList({ mine }: { mine?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [status, setStatus] = useState<StatusFilter>('OPEN');
   const [assigned, setAssigned] = useState<AssignFilter>('all');
@@ -53,30 +55,30 @@ export function GrievanceList({ mine }: { mine?: boolean }) {
             value={status}
             onChange={setStatus}
             options={[
-              { value: 'OPEN', label: `Open${openCount === null ? '' : ` · ${num(openCount)}`}` },
-              { value: 'RESOLVED', label: 'Resolved' },
-              { value: 'ALL', label: 'All' },
+              { value: 'OPEN', label: openCount === null ? t('gr_open') : t('gr_open_count', { n: num(openCount) }) },
+              { value: 'RESOLVED', label: t('gr_resolved') },
+              { value: 'ALL', label: t('gr_all') },
             ]}
           />
           {!mine ? (
-            <select className="select" value={assigned} onChange={(e) => setAssigned(e.target.value as AssignFilter)} aria-label="Assignment">
-              <option value="all">Assigned or not</option>
-              <option value="no">Unassigned</option>
-              <option value="yes">Assigned</option>
+            <select className="select" value={assigned} onChange={(e) => setAssigned(e.target.value as AssignFilter)} aria-label={t('gr_assignment')}>
+              <option value="all">{t('gr_assigned_or_not')}</option>
+              <option value="no">{t('gr_unassigned')}</option>
+              <option value="yes">{t('gr_assigned')}</option>
             </select>
           ) : null}
-          <SearchInput value={q} onChange={setQ} placeholder="Search issue, place or description" />
+          <SearchInput value={q} onChange={setQ} placeholder={t('gr_search')} />
         </div>
 
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Issue</th>
-                <th>Place</th>
-                <th>{mine ? 'Assigned by' : 'Assigned to'}</th>
-                <th>Status</th>
-                <th>{mine ? 'Assigned' : 'Raised'}</th>
+                <th>{t('col_issue')}</th>
+                <th>{t('col_place')}</th>
+                <th>{mine ? t('col_assigned_by') : t('col_assigned_to')}</th>
+                <th>{t('col_status')}</th>
+                <th>{mine ? t('col_assigned') : t('col_raised')}</th>
               </tr>
             </thead>
             {!data && loading ? (
@@ -100,7 +102,7 @@ export function GrievanceList({ mine }: { mine?: boolean }) {
                             <span className="cell-main">{row.subIssueName ?? row.issueName}</span>
                             <Badge tone={bandTone(row.issueBand)}>{bandLabel(row.issueBand)}</Badge>
                           </div>
-                          <div className="cell-sub clamp-2">{row.description || (row.subIssueName ? row.issueName : 'No description')}</div>
+                          <div className="cell-sub clamp-2">{row.description || (row.subIssueName ? row.issueName : t('gr_no_description'))}</div>
                         </div>
                       </div>
                     </td>
@@ -108,7 +110,7 @@ export function GrievanceList({ mine }: { mine?: boolean }) {
                     <td>
                       {mine || row.isAssignedToMe ? (
                         <span className="cell-sub">
-                          {mine ? '' : 'You · by '}
+                          {mine ? '' : t('gr_you_by')}
                           {row.assignedByName ?? '—'}
                         </span>
                       ) : row.assigneeName ? (
@@ -122,12 +124,12 @@ export function GrievanceList({ mine }: { mine?: boolean }) {
                           </div>
                         </div>
                       ) : row.status === 'OPEN' ? (
-                        <Badge tone="warn">Unassigned</Badge>
+                        <Badge tone="warn">{t('gr_unassigned')}</Badge>
                       ) : (
                         <span className="muted">—</span>
                       )}
                     </td>
-                    <td>{row.status === 'RESOLVED' ? <Badge tone="ok">Resolved</Badge> : <Badge tone="accent" dot>Open</Badge>}</td>
+                    <td>{row.status === 'RESOLVED' ? <Badge tone="ok">{t('gr_resolved')}</Badge> : <Badge tone="accent" dot>{t('gr_open')}</Badge>}</td>
                     <td className="cell-sub nowrap">{ago(mine ? row.assignedAt ?? row.createdAt : row.createdAt)}</td>
                   </tr>
                 ))}
@@ -141,18 +143,18 @@ export function GrievanceList({ mine }: { mine?: boolean }) {
             title={
               mine
                 ? status === 'OPEN'
-                  ? 'Nothing assigned to you'
-                  : 'Nothing to show'
+                  ? t('gr_empty_mine_open')
+                  : t('gr_empty_nothing')
                 : status === 'OPEN'
-                  ? 'No open grievances'
-                  : 'Nothing to show'
+                  ? t('gr_empty_open')
+                  : t('gr_empty_nothing')
             }
             text={
               mine
-                ? 'Grievances handed to you by a senior office bearer appear here.'
+                ? t('gr_empty_mine_sub')
                 : status === 'OPEN'
-                  ? 'Every grievance in your area has been handled.'
-                  : 'Try another filter.'
+                  ? t('gr_empty_open_sub')
+                  : t('gr_empty_filter_sub')
             }
           />
         ) : null}

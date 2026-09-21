@@ -3,8 +3,9 @@
 import { Icon } from '@/components/icons';
 import { useSession } from '@/components/session';
 import { Alert, Badge, Card, PageHeader, Skeleton } from '@/components/ui';
-import { AREA_LEVEL, postTitle } from '@/lib/format';
+import { AREA_LEVEL, plural, postTitle } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { t as translate, useT } from '@/lib/i18n';
 
 type Level = { code: string; name: string; posts: { post: string; title: string; rank: number }[] };
 
@@ -29,7 +30,15 @@ const EXTRA: Level = {
   ],
 };
 
+/** Server level names arrive in English; show our own wording when we know the code. */
+function levelName(level: Level) {
+  const key = `or_level_${level.code}`;
+  const label = translate(key);
+  return label === key ? level.name : label;
+}
+
 export default function OrganisationPage() {
+  const t = useT();
   const me = useSession();
   const { data, error, loading } = useApi<{ levels: Level[] }>('/admin/organisation');
   const base = data?.levels.length ? data.levels : FALLBACK;
@@ -45,11 +54,11 @@ export default function OrganisationPage() {
 
   return (
     <>
-      <PageHeader title="Hierarchy" subtitle="How posts rank across the organisation. A post can manage and assign every post below it." />
+      <PageHeader title={t('or_title')} subtitle={t('or_subtitle')} />
       {error ? <Alert>{error}</Alert> : null}
 
       <div className="grid-main">
-        <Card title="Posts by level" flush>
+        <Card title={t('or_posts_by_level')} flush>
           {levels.length === 0 ? (
             <div className="card-body stack">
               <Skeleton height={40} />
@@ -60,8 +69,8 @@ export default function OrganisationPage() {
             levels.map((level) => (
               <div className="level" key={level.code}>
                 <div>
-                  <div className="level-name">{level.name}</div>
-                  <div className="cell-sub">{level.posts.length} post{level.posts.length === 1 ? '' : 's'}</div>
+                  <div className="level-name">{levelName(level)}</div>
+                  <div className="cell-sub">{plural(level.posts.length, 'post')}</div>
                 </div>
                 <div className="chips">
                   {[...level.posts]
@@ -70,8 +79,8 @@ export default function OrganisationPage() {
                       const mine = post.post === me.post;
                       const can = assignable.has(post.post);
                       return (
-                        <span key={post.post} className={`chip ${mine ? 'mine' : can ? 'can' : ''}`} title={`Rank ${post.rank}`}>
-                          {post.title}
+                        <span key={post.post} className={`chip ${mine ? 'mine' : can ? 'can' : ''}`} title={t('or_rank_title', { n: post.rank })}>
+                          {postTitle(post.post)}
                           <small className="num">{post.rank}</small>
                         </span>
                       );
@@ -83,7 +92,7 @@ export default function OrganisationPage() {
         </Card>
 
         <div className="stack">
-          <Card title="Your position">
+          <Card title={t('or_your_position')}>
             <div className="stack" style={{ gap: 12 }}>
               <div className="who">
                 <span className="list-icon tone-accent">
@@ -91,7 +100,7 @@ export default function OrganisationPage() {
                 </span>
                 <div>
                   <div className="cell-main">{postTitle(me.post)}</div>
-                  <div className="cell-sub num">Rank {me.rank}</div>
+                  <div className="cell-sub num">{t('or_rank', { n: me.rank })}</div>
                 </div>
               </div>
               <div className="who">
@@ -100,24 +109,24 @@ export default function OrganisationPage() {
                 </span>
                 <div>
                   <div className="cell-main">{me.area.name}</div>
-                  <div className="cell-sub">{AREA_LEVEL[me.area.level] ?? me.area.level} you manage</div>
+                  <div className="cell-sub">{t('or_level_you_manage', { level: AREA_LEVEL()[me.area.level] ?? me.area.level })}</div>
                 </div>
               </div>
             </div>
           </Card>
-          <Card title="Legend">
+          <Card title={t('or_legend')}>
             <div className="stack" style={{ gap: 10 }}>
               <div className="row">
-                <span className="chip mine">Your post</span>
+                <span className="chip mine">{t('or_your_post')}</span>
               </div>
               <div className="row">
-                <span className="chip can">You can assign</span>
-                <Badge tone="brand">{me.assignablePosts.length} posts</Badge>
+                <span className="chip can">{t('or_you_can_assign')}</span>
+                <Badge tone="brand">{plural(me.assignablePosts.length, 'post')}</Badge>
               </div>
               <div className="row">
-                <span className="chip">Above your post</span>
+                <span className="chip">{t('or_above_your_post')}</span>
               </div>
-              <div className="cell-sub">The small number is the rank. Higher ranks see and manage lower ones in their area.</div>
+              <div className="cell-sub">{t('or_legend_note')}</div>
             </div>
           </Card>
         </div>

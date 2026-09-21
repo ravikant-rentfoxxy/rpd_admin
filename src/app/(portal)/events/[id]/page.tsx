@@ -20,13 +20,15 @@ import {
   useToast,
 } from '@/components/ui';
 import { api } from '@/lib/api';
-import { activityType, dateRange, dash, EVENT_PHASE, mapsUrl, mobile, num, pct, timeOnly, when } from '@/lib/format';
+import { activityType, dateRange, dash, EVENT_PHASE, mapsUrl, mobile, num, pct, plural, timeOnly, when } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { EventDetail } from '@/lib/types';
 
 type Filter = 'all' | 'in' | 'out';
 
 export default function EventDetailPage() {
+  const t = useT();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
@@ -39,7 +41,7 @@ export default function EventDetailPage() {
   if (error && !event) {
     return (
       <>
-        <PageHeader title="Event" back={{ href: '/events', label: 'Events' }} />
+        <PageHeader title={t('ed_event')} back={{ href: '/events', label: t('ev_title') }} />
         <Alert>{error}</Alert>
       </>
     );
@@ -48,7 +50,7 @@ export default function EventDetailPage() {
   if (!event) {
     return (
       <>
-        <PageHeader title={<Skeleton width={260} height={26} />} back={{ href: '/events', label: 'Events' }} />
+        <PageHeader title={<Skeleton width={260} height={26} />} back={{ href: '/events', label: t('ev_title') }} />
         <div className="grid-stats">
           {[0, 1, 2, 3].map((i) => (
             <Card key={i}>
@@ -60,7 +62,7 @@ export default function EventDetailPage() {
     );
   }
 
-  const badge = EVENT_PHASE[event.phase];
+  const badge = EVENT_PHASE()[event.phase];
   const checkedIn = event.attendees.filter((row) => row.checkedInAt).length;
   const map = mapsUrl(event.latitude, event.longitude, event.venue);
   const shown = event.attendees.filter((row) => (filter === 'in' ? row.checkedInAt : filter === 'out' ? !row.checkedInAt : true));
@@ -71,10 +73,10 @@ export default function EventDetailPage() {
     setBusy(true);
     try {
       await api(`/admin/events/${event!.id}`, { method: 'DELETE' });
-      toast('Event cancelled');
+      toast(t('toast_event_cancelled'));
       router.replace('/events');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not cancel', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_cancel'), 'bad');
       setBusy(false);
     }
   }
@@ -82,7 +84,7 @@ export default function EventDetailPage() {
   return (
     <>
       <PageHeader
-        back={{ href: '/events', label: 'Events' }}
+        back={{ href: '/events', label: t('ev_title') }}
         title={
           <span className="row" style={{ gap: 10 }}>
             {event.title}
@@ -97,44 +99,44 @@ export default function EventDetailPage() {
         actions={
           event.canManage && event.phase !== 'ENDED' ? (
             <Button variant="danger" icon={<Icon.Trash />} onClick={() => setCancelling(true)}>
-              Cancel event
+              {t('ed_cancel_event')}
             </Button>
           ) : undefined
         }
       />
 
       <div className="grid-stats">
-        <StatCard label="Joined" icon={<Icon.Users />} value={num(event.attendees.length)} hint="Members who said they will come" />
-        <StatCard label="Checked in" icon={<Icon.CheckShield />} tone="ok" value={num(checkedIn)} hint="Verified within 500 m of the venue" />
+        <StatCard label={t('ed_joined')} icon={<Icon.Users />} value={num(event.attendees.length)} hint={t('ed_joined_hint')} />
+        <StatCard label={t('ed_checked_in')} icon={<Icon.CheckShield />} tone="ok" value={num(checkedIn)} hint={t('ed_checked_in_hint')} />
         <StatCard
-          label="Attendance"
+          label={t('ed_attendance')}
           icon={<Icon.Activity />}
           tone="accent"
           value={event.attendees.length ? `${pct(checkedIn, event.attendees.length)}%` : '—'}
-          hint="Checked in out of joined"
+          hint={t('ed_attendance_hint')}
         />
         <StatCard
-          label="Avg. distance"
+          label={t('ed_avg_distance')}
           icon={<Icon.Pin />}
           tone="neutral"
-          value={avgDistance != null ? `${avgDistance} m` : '—'}
-          hint="From the venue at check-in"
+          value={avgDistance != null ? t('metres_short', { n: avgDistance }) : '—'}
+          hint={t('ed_avg_distance_hint')}
         />
       </div>
 
       <div className="grid-main">
         <Card
-          title="Attendance"
-          subtitle={`${event.attendees.length} joined`}
+          title={t('ed_attendance')}
+          subtitle={t('ed_n_joined', { n: event.attendees.length })}
           flush
           action={
             <Segmented<Filter>
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all', label: 'All' },
-                { value: 'in', label: `Checked in · ${checkedIn}` },
-                { value: 'out', label: `Not yet · ${event.attendees.length - checkedIn}` },
+                { value: 'all', label: t('gr_all') },
+                { value: 'in', label: t('ed_filter_checked_in', { n: checkedIn }) },
+                { value: 'out', label: t('ed_filter_not_yet', { n: event.attendees.length - checkedIn }) },
               ]}
             />
           }
@@ -142,18 +144,18 @@ export default function EventDetailPage() {
           {shown.length === 0 ? (
             <EmptyState
               icon={<Icon.Users />}
-              title={event.attendees.length ? 'No one in this list' : 'No one has joined yet'}
-              text={event.attendees.length ? undefined : 'Members join from Upcoming events in the app.'}
+              title={event.attendees.length ? t('ed_empty_list') : t('ed_empty_none')}
+              text={event.attendees.length ? undefined : t('ed_empty_none_sub')}
             />
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Member</th>
-                    <th>Joined</th>
-                    <th>Check-in</th>
-                    <th>Distance</th>
+                    <th>{t('col_member')}</th>
+                    <th>{t('ed_joined')}</th>
+                    <th>{t('col_checkin')}</th>
+                    <th>{t('col_distance')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -180,10 +182,10 @@ export default function EventDetailPage() {
                             {timeOnly(row.checkedInAt)}
                           </Badge>
                         ) : (
-                          <Badge>Not checked in</Badge>
+                          <Badge>{t('ed_not_checked_in')}</Badge>
                         )}
                       </td>
-                      <td className="num">{row.checkInMetres != null ? `${row.checkInMetres} m` : <span className="muted">—</span>}</td>
+                      <td className="num">{row.checkInMetres != null ? t('metres_short', { n: row.checkInMetres }) : <span className="muted">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -199,29 +201,29 @@ export default function EventDetailPage() {
               <img src={event.imageUrl} alt="" />
             </div>
           ) : null}
-          <Card title="Event details">
+          <Card title={t('ed_details')}>
             <KeyValues
               items={[
-                ['Starts', when(event.startsAt)],
-                ['Ends', when(event.endsAt)],
-                ['Venue', event.venue],
+                [t('kv_starts'), when(event.startsAt)],
+                [t('kv_ends'), when(event.endsAt)],
+                [t('kv_venue'), event.venue],
                 [
-                  'Map',
+                  t('kv_map'),
                   map ? (
                     <a href={map} target="_blank" rel="noreferrer" className="link">
-                      Open in Maps
+                      {t('open_in_maps')}
                     </a>
                   ) : null,
                 ],
-                ['Host', <Link key="host" href={`/members/${event.host.id}`} className="link">{event.host.fullName}</Link>],
-                ['Host post', event.host.post],
-                ['Venue pinned', event.latitude != null ? 'Yes' : 'No — address lookup at check-in'],
-                ['Created', when(event.createdAt)],
+                [t('kv_host'), <Link key="host" href={`/members/${event.host.id}`} className="link">{event.host.fullName}</Link>],
+                [t('kv_host_post'), event.host.post],
+                [t('kv_venue_pinned'), event.latitude != null ? t('yes') : t('ed_no_pin')],
+                [t('kv_created'), when(event.createdAt)],
               ]}
             />
             {event.description ? (
               <div className="mt">
-                <p className="section-title">Notes</p>
+                <p className="section-title">{t('section_notes')}</p>
                 <div style={{ whiteSpace: 'pre-wrap' }}>{event.description}</div>
               </div>
             ) : null}
@@ -231,16 +233,14 @@ export default function EventDetailPage() {
 
       <ConfirmModal
         open={cancelling}
-        title="Cancel this event?"
+        title={t('ed_cancel_q')}
         danger
         busy={busy}
-        confirmLabel="Cancel event"
-        message={
-          <>
-            <b>{event.title}</b> will be removed from the app for everyone, including the {event.attendees.length} member
-            {event.attendees.length === 1 ? '' : 's'} who joined. It cannot be restored from the portal.
-          </>
-        }
+        confirmLabel={t('ed_cancel_event')}
+        message={t('ed_cancel_msg', {
+          title: event.title,
+          members: plural(event.attendees.length, 'member'),
+        })}
         onClose={() => setCancelling(false)}
         onConfirm={cancel}
       />

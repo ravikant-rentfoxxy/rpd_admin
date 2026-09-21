@@ -7,11 +7,13 @@ import { Alert, Avatar, Badge, Card, EmptyState, PageHeader, Pagination, SearchI
 import { withQuery } from '@/lib/api';
 import { ago, MEMBER_STATUS, mobile, plural, POST_LABELS, postTitle } from '@/lib/format';
 import { useApi, useDebounced } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { Member, Paged } from '@/lib/types';
 
 const PAGE_SIZE = 25;
 
 export default function MembersPage() {
+  const t = useT();
   const router = useRouter();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -29,23 +31,23 @@ export default function MembersPage() {
 
   return (
     <>
-      <PageHeader title="Members" subtitle="Everyone registered in your area. Open a member to change their status or post." />
+      <PageHeader title={t('me_title')} subtitle={t('me_subtitle')} />
       {error ? <Alert>{error}</Alert> : null}
 
       <Card flush>
         <div className="toolbar">
-          <SearchInput value={q} onChange={setQ} placeholder="Search name, membership no. or mobile" />
-          <select className="select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-            <option value="">Any status</option>
-            {Object.entries(MEMBER_STATUS).map(([value, meta]) => (
+          <SearchInput value={q} onChange={setQ} placeholder={t('me_search')} />
+          <select className="select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label={t('status_label')}>
+            <option value="">{t('any_status')}</option>
+            {Object.entries(MEMBER_STATUS()).map(([value, meta]) => (
               <option key={value} value={value}>
                 {meta.label}
               </option>
             ))}
           </select>
-          <select className="select" value={post} onChange={(e) => setPost(e.target.value)} aria-label="Post">
-            <option value="">Any post</option>
-            {Object.entries(POST_LABELS)
+          <select className="select" value={post} onChange={(e) => setPost(e.target.value)} aria-label={t('post_label')}>
+            <option value="">{t('any_post')}</option>
+            {Object.entries(POST_LABELS())
               .filter(([value]) => value !== 'SUPER_ADMIN')
               .map(([value, label]) => (
                 <option key={value} value={value}>
@@ -60,12 +62,12 @@ export default function MembersPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Member</th>
-                <th>Mobile</th>
-                <th>Post</th>
-                <th>Area</th>
-                <th>Status</th>
-                <th>Last active</th>
+                <th>{t('col_member')}</th>
+                <th>{t('col_mobile')}</th>
+                <th>{t('col_post')}</th>
+                <th>{t('col_area')}</th>
+                <th>{t('col_status')}</th>
+                <th>{t('col_last_active')}</th>
               </tr>
             </thead>
             {!data && loading ? (
@@ -73,7 +75,7 @@ export default function MembersPage() {
             ) : (
               <tbody>
                 {rows.map((row) => {
-                  const badge = MEMBER_STATUS[row.status];
+                  const badge = MEMBER_STATUS()[row.status];
                   const office = row.post && row.post !== 'MEMBER';
                   return (
                     <tr key={row.id} className="clickable" onClick={() => router.push(`/members/${row.id}`)}>
@@ -81,19 +83,19 @@ export default function MembersPage() {
                         <div className="who">
                           <Avatar name={row.fullName} url={row.photoUrl} />
                           <div style={{ minWidth: 0 }}>
-                            <div className="cell-main truncate">{row.fullName || 'Unnamed member'}</div>
+                            <div className="cell-main truncate">{row.fullName || t('unnamed_member')}</div>
                             <div className="cell-sub">{row.membershipNumber ?? `#${row.rowId}`}</div>
                           </div>
                         </div>
                       </td>
                       <td className="nowrap num">{mobile(row.mobile)}</td>
-                      <td>{office ? <Badge tone="brand">{postTitle(row.post)}</Badge> : <span className="muted">Member</span>}</td>
+                      <td>{office ? <Badge tone="brand">{postTitle(row.post)}</Badge> : <span className="muted">{t('post_MEMBER')}</span>}</td>
                       <td>
                         <div className="cell-main" style={{ fontWeight: 500 }}>{row.assemblyName ?? row.districtName ?? '—'}</div>
                         {row.assemblyName && row.districtName ? <div className="cell-sub">{row.districtName}</div> : null}
                       </td>
                       <td>{badge ? <Badge tone={badge.tone}>{badge.label}</Badge> : row.status}</td>
-                      <td className="cell-sub nowrap">{row.lastActiveAt ? ago(row.lastActiveAt) : 'Never'}</td>
+                      <td className="cell-sub nowrap">{row.lastActiveAt ? ago(row.lastActiveAt) : t('never')}</td>
                     </tr>
                   );
                 })}
@@ -104,8 +106,8 @@ export default function MembersPage() {
         {data && rows.length === 0 ? (
           <EmptyState
             icon={<Icon.Users />}
-            title={filtered ? 'No members match' : 'No members in your area yet'}
-            text={filtered ? 'Try a different name, number or filter.' : 'Members who join from the app will appear here.'}
+            title={filtered ? t('me_empty_filtered') : t('me_empty')}
+            text={filtered ? t('me_empty_filtered_sub') : t('me_empty_sub')}
           />
         ) : null}
         {data ? <Pagination page={data.page} limit={data.limit} total={data.total} onPage={setPage} /> : null}

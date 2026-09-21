@@ -1,5 +1,6 @@
 'use client';
 
+import { intlLocale, useT } from '@/lib/i18n';
 import Link from 'next/link';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
@@ -198,24 +199,25 @@ export function Pagination({
   total: number;
   onPage: (page: number) => void;
 }) {
-  if (total <= limit && page === 1) return null;
+  const t = useT();
   const pages = Math.max(1, Math.ceil(total / limit));
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(total, page * limit);
+  if (total <= limit && page === 1) return null;
   return (
     <div className="pagination">
       <span className="num">
-        {from}–{to} of {total.toLocaleString('en-IN')}
+        {t('range_of', { from, to, total: total.toLocaleString(intlLocale()) })}
       </span>
       <div className="row">
         <Button size="sm" icon={<Icon.ChevronLeft />} disabled={page <= 1} onClick={() => onPage(page - 1)}>
-          Previous
+          {t('previous')}
         </Button>
         <span className="num small">
-          Page {page} of {pages}
+          {t('page_of', { page, pages })}
         </span>
         <Button size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-          Next
+          {t('next')}
           <Icon.ChevronRight />
         </Button>
       </div>
@@ -323,6 +325,7 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   useEscape(open, onClose);
   if (!open) return null;
   return (
@@ -331,7 +334,7 @@ export function Modal({
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={onClose} aria-label={t('close')}>
             <Icon.Close />
           </button>
         </div>
@@ -355,6 +358,7 @@ export function Drawer({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const t = useT();
   useEscape(open, onClose);
   if (!open) return null;
   return (
@@ -363,7 +367,7 @@ export function Drawer({
       <aside className="drawer" role="dialog" aria-modal="true">
         <div className="drawer-head">
           <h3>{title}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={onClose} aria-label={t('close')}>
             <Icon.Close />
           </button>
         </div>
@@ -393,6 +397,7 @@ export function ConfirmModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Modal
       open={open}
@@ -401,7 +406,7 @@ export function ConfirmModal({
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button variant={danger ? 'danger' : 'primary'} loading={busy} onClick={onConfirm}>
             {confirmLabel}

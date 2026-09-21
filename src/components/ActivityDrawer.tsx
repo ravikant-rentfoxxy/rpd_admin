@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { ACTIVITY_STATUS, activityType, dash, mapsUrl, mobile, when } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { ActivityDetail } from '@/lib/types';
 import { Icon } from './icons';
 import { useCounts } from './session';
@@ -19,13 +20,14 @@ export function ActivityDrawer({
   onClose: () => void;
   onReviewed?: () => void;
 }) {
+  const t = useT();
   const { data, error, loading, reload } = useApi<{ activity: ActivityDetail }>(activityId ? `/admin/activities/${activityId}` : null);
   const activity = activityId && data?.activity.id === activityId ? data.activity : null;
 
   return (
     <Drawer
       open={Boolean(activityId)}
-      title={activity ? activityType(activity.type) : 'Activity'}
+      title={activity ? activityType(activity.type) : t('activity')}
       onClose={onClose}
       footer={
         activity?.canReview ? (
@@ -56,7 +58,8 @@ export function ActivityDrawer({
 }
 
 function ActivityBody({ activity }: { activity: ActivityDetail }) {
-  const status = ACTIVITY_STATUS[activity.status];
+  const t = useT();
+  const status = ACTIVITY_STATUS()[activity.status];
   const map = mapsUrl(activity.latitude, activity.longitude);
   return (
     <>
@@ -77,27 +80,27 @@ function ActivityBody({ activity }: { activity: ActivityDetail }) {
 
       {activity.reviewFlag ? (
         <Alert tone="warn">
-          Flagged for a closer look
-          {activity.farAwayReason ? ` — recorded away from the booth: “${activity.farAwayReason}”` : '.'}
+          {t('flagged_closer_look')}
+          {activity.farAwayReason ? t('flagged_away_suffix', { reason: activity.farAwayReason }) : '.'}
         </Alert>
       ) : null}
 
       <div>
-        <p className="section-title">Details</p>
+        <p className="section-title">{t('section_details')}</p>
         <KeyValues
           items={[
-            ['When', when(activity.occurredAt)],
-            ['Recorded', when(activity.createdAt)],
-            ['Booth', activity.booth ? `${activity.booth.code} · ${activity.booth.name}` : null],
-            ['Village', activity.booth?.village],
-            ['Attendees', activity.attendeeCount ? String(activity.attendeeCount) : null],
-            ['Homes covered', activity.homesCovered != null ? String(activity.homesCovered) : null],
-            ['Distance from booth', activity.distanceMetres != null ? `${activity.distanceMetres} m` : null],
+            [t('kv_when'), when(activity.occurredAt)],
+            [t('kv_recorded'), when(activity.createdAt)],
+            [t('kv_booth'), activity.booth ? `${activity.booth.code} · ${activity.booth.name}` : null],
+            [t('kv_village'), activity.booth?.village],
+            [t('kv_attendees'), activity.attendeeCount ? String(activity.attendeeCount) : null],
+            [t('kv_homes'), activity.homesCovered != null ? String(activity.homesCovered) : null],
+            [t('kv_distance'), activity.distanceMetres != null ? t('metres_short', { n: activity.distanceMetres }) : null],
             [
-              'Location',
+              t('kv_location'),
               map ? (
                 <a href={map} target="_blank" rel="noreferrer" className="link">
-                  Open in Maps
+                  {t('open_in_maps')}
                 </a>
               ) : null,
             ],
@@ -107,39 +110,39 @@ function ActivityBody({ activity }: { activity: ActivityDetail }) {
 
       {activity.notes ? (
         <div>
-          <p className="section-title">Notes</p>
+          <p className="section-title">{t('section_notes')}</p>
           <div style={{ whiteSpace: 'pre-wrap' }}>{activity.notes}</div>
         </div>
       ) : null}
 
       {activity.backdateReason ? (
         <div>
-          <p className="section-title">Recorded late because</p>
+          <p className="section-title">{t('section_backdate')}</p>
           <div>{activity.backdateReason}</div>
         </div>
       ) : null}
 
       <div>
-        <p className="section-title">Photos ({activity.photos.length})</p>
+        <p className="section-title">{t('section_photos', { n: activity.photos.length })}</p>
         {activity.photos.length ? (
           <div className="photos">
             {activity.photos.map((photo) =>
               photo.url ? (
                 <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer" title={when(photo.capturedAt)}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt={`${photo.kind} photo`} loading="lazy" />
+                  <img src={photo.url} alt={t('photo_alt', { kind: photo.kind })} loading="lazy" />
                 </a>
               ) : null,
             )}
           </div>
         ) : (
-          <div className="muted">No photos attached.</div>
+          <div className="muted">{t('no_photos')}</div>
         )}
       </div>
 
       {activity.attendees.length ? (
         <div>
-          <p className="section-title">Attendees ({activity.attendees.length})</p>
+          <p className="section-title">{t('section_attendees', { n: activity.attendees.length })}</p>
           <div className="chips">
             {activity.attendees.map((person) =>
               person.memberId ? (
@@ -159,12 +162,13 @@ function ActivityBody({ activity }: { activity: ActivityDetail }) {
 
       {activity.reviews.length ? (
         <div>
-          <p className="section-title">Review history</p>
+          <p className="section-title">{t('section_review_history')}</p>
           <ul className="timeline">
             {activity.reviews.map((review) => (
               <li key={review.id}>
                 <div>
-                  <b>{review.decision === 'VERIFIED' ? 'Verified' : 'Rejected'}</b> by {review.reviewerName}
+                  <b>{review.decision === 'VERIFIED' ? t('status_verified') : t('status_rejected')}</b>{' '}
+                  {t('reviewed_by', { name: review.reviewerName })}
                   <div className="cell-sub">{when(review.createdAt)}</div>
                   {review.reason ? <div style={{ marginTop: 2 }}>“{review.reason}”</div> : null}
                 </div>
@@ -179,6 +183,7 @@ function ActivityBody({ activity }: { activity: ActivityDetail }) {
 
 /** Verify / reject buttons with the reject-reason dialog. */
 export function ReviewActions({ activityId, onDone, compact }: { activityId: string; onDone: () => void; compact?: boolean }) {
+  const t = useT();
   const toast = useToast();
   const { refreshCounts } = useCounts();
   const [busy, setBusy] = useState<'accept' | 'reject' | null>(null);
@@ -189,11 +194,11 @@ export function ReviewActions({ activityId, onDone, compact }: { activityId: str
     setBusy('accept');
     try {
       await api(`/admin/verification/${activityId}/accept`, { method: 'POST' });
-      toast('Activity verified');
+      toast(t('toast_activity_verified'));
       refreshCounts();
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not verify', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_verify'), 'bad');
     } finally {
       setBusy(null);
     }
@@ -207,13 +212,13 @@ export function ReviewActions({ activityId, onDone, compact }: { activityId: str
         method: 'POST',
         body: JSON.stringify({ reason: reason.trim() }),
       });
-      toast('Activity rejected');
+      toast(t('toast_activity_rejected'));
       setRejecting(false);
       setReason('');
       refreshCounts();
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not reject', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_reject'), 'bad');
     } finally {
       setBusy(null);
     }
@@ -222,33 +227,33 @@ export function ReviewActions({ activityId, onDone, compact }: { activityId: str
   return (
     <>
       <Button variant="danger" size={compact ? 'sm' : 'md'} icon={<Icon.X />} disabled={busy !== null} onClick={() => setRejecting(true)}>
-        Reject
+        {t('reject')}
       </Button>
       <Button variant="success" size={compact ? 'sm' : 'md'} icon={<Icon.Check />} loading={busy === 'accept'} disabled={busy !== null} onClick={accept}>
-        Verify
+        {t('verify')}
       </Button>
       <Modal
         open={rejecting}
-        title="Reject activity"
+        title={t('reject_activity')}
         onClose={() => setRejecting(false)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setRejecting(false)} disabled={busy === 'reject'}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button variant="danger" loading={busy === 'reject'} disabled={reason.trim().length < 4} onClick={reject}>
-              Reject activity
+              {t('reject_activity')}
             </Button>
           </>
         }
       >
-        <Field label="Reason" hint="Saved in the activity's review history. At least 4 characters.">
+        <Field label={t('reason')} hint={t('reject_reason_hint')}>
           <textarea
             className="textarea"
             value={reason}
             maxLength={600}
             autoFocus
-            placeholder="e.g. Photo does not show the meeting"
+            placeholder={t('reject_reason_placeholder')}
             onChange={(e) => setReason(e.target.value)}
           />
         </Field>

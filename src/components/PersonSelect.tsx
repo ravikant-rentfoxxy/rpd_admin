@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Assignee } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 import { Icon } from './icons';
 import { Avatar, Badge } from './ui';
 
 function Workload({ count }: { count: number }) {
-  return <Badge tone={count === 0 ? 'ok' : count >= 5 ? 'warn' : 'neutral'}>{count === 0 ? 'Free' : `${count} open`}</Badge>;
+  const t = useT();
+  return <Badge tone={count === 0 ? 'ok' : count >= 5 ? 'warn' : 'neutral'}>{count === 0 ? t('ps_free') : t('ps_open_count', { n: count })}</Badge>;
 }
 
 /** Searchable dropdown for choosing who follows up a grievance. */
@@ -23,6 +25,7 @@ export function PersonSelect({
   onChange: (id: string) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
@@ -99,7 +102,7 @@ export function PersonSelect({
             <Workload count={selected.openAssigned} />
           </>
         ) : (
-          <span className="grow muted">Select a person ({people.length} available)</span>
+          <span className="grow muted">{t('ps_select_person', { n: people.length })}</span>
         )}
         <span className="combo-chevron">
           <Icon.ChevronRight />
@@ -110,12 +113,12 @@ export function PersonSelect({
         <div className="combo-menu" role="listbox">
           <div className="combo-search">
             <Icon.Search />
-            <input ref={search} value={q} placeholder="Search name, post or area" onChange={(e) => { setQ(e.target.value); setActive(0); }} />
+            <input ref={search} value={q} placeholder={t('ps_search')} onChange={(e) => { setQ(e.target.value); setActive(0); }} />
           </div>
           <div className="combo-options">
             {options.length === 0 ? (
               <div className="muted small" style={{ padding: '10px 12px' }}>
-                No one matches “{q}”.
+                {t('ps_no_match', { q })}
               </div>
             ) : (
               options.map((row, index) => (
@@ -132,7 +135,7 @@ export function PersonSelect({
                   <span className="grow" style={{ minWidth: 0 }}>
                     <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
                       <span className="cell-main truncate">{row.fullName}</span>
-                      {row.id === currentId ? <Badge tone="accent">Current</Badge> : null}
+                      {row.id === currentId ? <Badge tone="accent">{t('ps_current')}</Badge> : null}
                     </span>
                     <span className="cell-sub truncate" style={{ display: 'block' }}>
                       {row.postLabel}

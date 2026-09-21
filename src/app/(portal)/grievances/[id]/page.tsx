@@ -22,9 +22,11 @@ import {
 import { api } from '@/lib/api';
 import { ago, bandLabel, bandTone, mapsUrl, mobile, postTitle, when } from '@/lib/format';
 import { useApi } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
 import type { Assignee, Grievance } from '@/lib/types';
 
 export default function GrievanceDetailPage() {
+  const t = useT();
   const params = useParams<{ id: string }>();
   const me = useSession();
   const toast = useToast();
@@ -41,11 +43,11 @@ export default function GrievanceDetailPage() {
         method: 'POST',
         body: JSON.stringify({ status: resolved ? 'RESOLVED' : 'OPEN' }),
       });
-      toast(resolved ? 'Grievance marked resolved' : 'Grievance reopened');
+      toast(resolved ? t('toast_resolved') : t('toast_reopened'));
       refreshCounts();
       await reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not update', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_update'), 'bad');
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,7 @@ export default function GrievanceDetailPage() {
   if (error && !post) {
     return (
       <>
-        <PageHeader title="Grievance" back={{ href: '/grievances', label: 'Grievances' }} />
+        <PageHeader title={t('gd_grievance')} back={{ href: '/grievances', label: t('gr_title') }} />
         <Alert>{error}</Alert>
       </>
     );
@@ -63,7 +65,7 @@ export default function GrievanceDetailPage() {
   if (!post) {
     return (
       <>
-        <PageHeader title={<Skeleton width={280} height={26} />} back={{ href: '/grievances', label: 'Grievances' }} />
+        <PageHeader title={<Skeleton width={280} height={26} />} back={{ href: '/grievances', label: t('gr_title') }} />
         <div className="grid-main">
           <Card>
             <Skeleton height={300} />
@@ -83,23 +85,23 @@ export default function GrievanceDetailPage() {
   return (
     <>
       <PageHeader
-        back={{ href: '/grievances', label: 'Grievances' }}
+        back={{ href: '/grievances', label: t('gr_title') }}
         title={
           <span className="row" style={{ gap: 10 }}>
             {post.subIssueName ?? post.issueName}
-            {post.status === 'RESOLVED' ? <Badge tone="ok">Resolved</Badge> : <Badge tone="accent" dot>Open</Badge>}
+            {post.status === 'RESOLVED' ? <Badge tone="ok">{t('gr_resolved')}</Badge> : <Badge tone="accent" dot>{t('gr_open')}</Badge>}
           </span>
         }
-        subtitle={`Raised ${ago(post.createdAt)}${post.regionLabel ? ` · ${post.regionLabel}` : ''}`}
+        subtitle={`${t('gd_raised_ago', { ago: ago(post.createdAt) })}${post.regionLabel ? ` · ${post.regionLabel}` : ''}`}
         actions={
           post.canResolve ? (
             post.status === 'OPEN' ? (
               <Button variant="success" icon={<Icon.Check />} loading={busy} onClick={() => setResolved(true)}>
-                Mark resolved
+                {t('gd_mark_resolved')}
               </Button>
             ) : (
               <Button loading={busy} onClick={() => setResolved(false)}>
-                Reopen
+                {t('gd_reopen')}
               </Button>
             )
           ) : undefined
@@ -117,43 +119,50 @@ export default function GrievanceDetailPage() {
               ) : (
                 <a href={post.mediaUrl} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={post.mediaUrl} alt="Grievance photo" />
+                  <img src={post.mediaUrl} alt={t('grievance_photo')} />
                 </a>
               )}
             </div>
           ) : null}
 
-          <Card title="What was reported">
+          <Card title={t('gd_what_reported')}>
             <div className="row" style={{ marginBottom: 12 }}>
               <Badge tone={bandTone(post.issueBand)}>{bandLabel(post.issueBand)}</Badge>
               {post.subIssueName ? <Badge>{post.issueName}</Badge> : null}
             </div>
-            <div style={{ whiteSpace: 'pre-wrap' }}>{post.description || <span className="muted">No description was added.</span>}</div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{post.description || <span className="muted">{t('gd_no_description')}</span>}</div>
           </Card>
 
           {post.canSummarise ? <XPostCard postId={post.serverId} /> : null}
 
-          <Card title="Details">
+          <Card title={t('gd_details')}>
             <KeyValues
               items={[
-                ['Raised on', when(post.createdAt)],
-                ['Place', post.regionLabel],
+                [t('kv_raised_on'), when(post.createdAt)],
+                [t('col_place'), post.regionLabel],
                 [
-                  'Raised by',
+                  t('kv_raised_by'),
                   post.canSeeAuthor && post.authorName
                     ? `${post.authorName}${post.authorPost ? ` · ${postTitle(post.authorPost)}` : ''}`
-                    : 'Hidden (senior member)',
+                    : t('gd_author_hidden'),
                 ],
-                ['Mobile', post.canSeeAuthor ? mobile(post.authorMobile) : null],
+                [t('kv_mobile'), post.canSeeAuthor ? mobile(post.authorMobile) : null],
                 [
-                  'Location',
+                  t('kv_location'),
                   map ? (
                     <a href={map} target="_blank" rel="noreferrer" className="link">
-                      Open in Maps
+                      {t('open_in_maps')}
                     </a>
                   ) : null,
                 ],
-                ['Resolved', post.resolvedAt ? `${when(post.resolvedAt)}${post.resolvedByName ? ` by ${post.resolvedByName}` : ''}` : null],
+                [
+                  t('kv_resolved'),
+                  post.resolvedAt
+                    ? post.resolvedByName
+                      ? t('gd_resolved_by', { when: when(post.resolvedAt), name: post.resolvedByName })
+                      : when(post.resolvedAt)
+                    : null,
+                ],
               ]}
             />
           </Card>
@@ -170,21 +179,21 @@ export default function GrievanceDetailPage() {
               await reload();
             }}
           />
-          <Card title="Timeline">
+          <Card title={t('gd_timeline')}>
             <ul className="timeline">
               <li>
                 <div>
-                  <b>Raised</b>
+                  <b>{t('gd_tl_raised')}</b>
                   <div className="cell-sub">{when(post.createdAt)}</div>
                 </div>
               </li>
               {post.assignedAt ? (
                 <li>
                   <div>
-                    <b>{assignedToMe ? 'Assigned to you' : `Assigned to ${post.assigneeName}`}</b>
+                    <b>{assignedToMe ? t('gd_tl_assigned_you') : t('gd_tl_assigned_to', { name: post.assigneeName ?? '' })}</b>
                     <div className="cell-sub">
                       {when(post.assignedAt)}
-                      {post.assignedByName ? ` · by ${post.assignedByName}` : ''}
+                      {post.assignedByName ? t('gd_by_name', { name: post.assignedByName }) : ''}
                     </div>
                   </div>
                 </li>
@@ -192,10 +201,10 @@ export default function GrievanceDetailPage() {
               {post.resolvedAt ? (
                 <li>
                   <div>
-                    <b>Resolved</b>
+                    <b>{t('kv_resolved')}</b>
                     <div className="cell-sub">
                       {when(post.resolvedAt)}
-                      {post.resolvedByName ? ` · by ${post.resolvedByName}` : ''}
+                      {post.resolvedByName ? t('gd_by_name', { name: post.resolvedByName }) : ''}
                     </div>
                   </div>
                 </li>
@@ -219,6 +228,7 @@ function AssignmentPanel({
   assignedToMe: boolean;
   onAssigned: (message: string) => Promise<void>;
 }) {
+  const t = useT();
   const toast = useToast();
   const canPick = post.canAssign && post.status === 'OPEN';
   const { data, error, loading, reload } = useApi<{ members: Assignee[] }>(canPick ? `/posts/${post.serverId}/assignees` : null);
@@ -233,25 +243,29 @@ function AssignmentPanel({
     setBusy(memberId ? 'assign' : 'clear');
     try {
       await api(`/posts/${post.serverId}/assign`, { method: 'POST', body: JSON.stringify({ memberId }) });
-      await onAssigned(memberId ? `Assigned to ${chosen?.fullName ?? 'the selected person'}` : 'Assignment removed');
+      await onAssigned(
+        memberId
+          ? t('toast_assigned_to', { name: chosen?.fullName ?? t('gd_the_selected_person') })
+          : t('toast_assignment_removed'),
+      );
       void reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not assign', 'bad');
+      toast(err instanceof Error ? err.message : t('err_could_not_assign'), 'bad');
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <Card title="Assignment" subtitle={canPick ? 'Hand this grievance to an office bearer below you in your area.' : undefined}>
+    <Card title={t('gd_assignment')} subtitle={canPick ? t('gd_assignment_sub') : undefined}>
       <div className="stack" style={{ gap: 14 }}>
         {assignedToMe ? (
           // The assignee knows it's theirs; show who handed it over instead of their own name.
           <div className="current-assignee">
-            <Avatar name={post.assignedByName || 'Assigned'} size={40} />
+            <Avatar name={post.assignedByName || t('gd_assignment')} size={40} />
             <div className="grow">
-              <div className="cell-sub">Assigned to you by</div>
-              <div className="cell-main">{post.assignedByName ?? 'A senior office bearer'}</div>
+              <div className="cell-sub">{t('gd_assigned_to_you_by')}</div>
+              <div className="cell-main">{post.assignedByName ?? t('gd_a_senior')}</div>
               <div className="cell-sub">
                 {post.assignedByPostLabel}
                 {post.assignedAt ? `${post.assignedByPostLabel ? ' · ' : ''}${ago(post.assignedAt)}` : ''}
@@ -265,13 +279,13 @@ function AssignmentPanel({
               <div className="cell-main">{post.assigneeName}</div>
               <div className="cell-sub">
                 {post.assigneePostLabel}
-                {post.assignedAt ? ` · assigned ${ago(post.assignedAt)}` : ''}
-                {post.assignedByName ? ` by ${post.assignedByName}` : ''}
+                {post.assignedAt ? t('gd_assigned_ago', { ago: ago(post.assignedAt) }) : ''}
+                {post.assignedByName ? t('gd_by_name', { name: post.assignedByName }) : ''}
               </div>
             </div>
             {canPick ? (
               <Button size="sm" variant="ghost" loading={busy === 'clear'} disabled={busy !== null} onClick={() => assign(null)}>
-                Remove
+                {t('remove')}
               </Button>
             ) : null}
           </div>
@@ -281,8 +295,8 @@ function AssignmentPanel({
               <Icon.UserPlus />
             </span>
             <div>
-              <div className="cell-main">Not assigned yet</div>
-              <div className="cell-sub">No one is following up on this grievance.</div>
+              <div className="cell-main">{t('gd_not_assigned')}</div>
+              <div className="cell-sub">{t('gd_not_assigned_sub')}</div>
             </div>
           </div>
         )}
@@ -290,12 +304,12 @@ function AssignmentPanel({
         {!canPick ? (
           <Alert tone="info">
             {post.status === 'RESOLVED'
-              ? 'This grievance is resolved. Reopen it to change who follows it up.'
+              ? t('gd_note_resolved')
               : assignedToMe
-                ? 'This grievance was handed to you to follow up.'
+                ? t('gd_note_assigned_you')
                 : mine
-                ? 'You raised this grievance, so someone senior to you assigns it.'
-                : 'Only someone senior to the person who raised this grievance can assign it.'}
+                ? t('gd_note_mine')
+                : t('gd_note_other')}
           </Alert>
         ) : (
           <>
@@ -309,21 +323,21 @@ function AssignmentPanel({
             ) : (data?.members.length ?? 0) === 0 ? (
               <EmptyState
                 icon={<Icon.Users />}
-                title="No one to assign"
+                title={t('gd_no_one_title')}
                 text={
                   <>
-                    There is no office bearer below your post in your area yet.{' '}
+                    {t('gd_no_one_text_1')}
                     <Link href="/members" className="link">
-                      Assign a post
-                    </Link>{' '}
-                    to a member first.
+                      {t('gd_no_one_link')}
+                    </Link>
+                    {t('gd_no_one_text_2')}
                   </>
                 }
               />
             ) : (
               <>
                 <div className="field">
-                  <span>Assign to</span>
+                  <span>{t('gd_assign_to')}</span>
                   <PersonSelect
                     people={data?.members ?? []}
                     value={selected}
@@ -340,10 +354,12 @@ function AssignmentPanel({
                   onClick={() => assign(selected)}
                 >
                   {chosen && selected !== post.assignedToId
-                    ? `${post.assigneeName ? 'Reassign' : 'Assign'} to ${chosen.fullName}`
-                    : 'Choose a person'}
+                    ? post.assigneeName
+                      ? t('gd_reassign_to', { name: chosen.fullName })
+                      : t('gd_assign_to_name', { name: chosen.fullName })
+                    : t('gd_choose_person')}
                 </Button>
-                <div className="cell-sub">They get a notification in the app. The “open” count is how many open grievances they already hold.</div>
+                <div className="cell-sub">{t('gd_assign_note')}</div>
               </>
             )}
           </>
